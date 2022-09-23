@@ -1,0 +1,2 @@
+# Mammoth
+ Mammoth Discord Bot
