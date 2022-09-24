@@ -408,7 +408,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         # Gather Hashes
 
         async def get_cached_hash(url):
-            url_to_hash = safe_read(COG, guild, "url_to_hash")
+            url_to_hash = safe_read("global", guild, "url_to_hash")
 
             if not (url_to_hash := url_to_hash.get()):
                 return
@@ -503,7 +503,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         # Cache Hashes
 
-        async with safe_edit(COG, guild, "url_to_hash") as url_to_hash_storage_object:
+        async with safe_edit("global", guild, "url_to_hash") as url_to_hash_storage_object:
             if not (url_to_hash := url_to_hash_storage_object.get()):
                 url_to_hash = URLToHashCache()
             if not isinstance(url_to_hash, URLToHashCache):
