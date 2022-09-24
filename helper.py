@@ -77,23 +77,6 @@ def is_blacklisted(guild: discord.Guild, hash: str):
     return hash_blacklist.blacklisted(hash)
 
 
-async def hash_external_link(link: str):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(link) as response:
-            try:
-                image = Image.open(io.BytesIO(await response.read()))
-                hash = imagehash.average_hash(image)
-                return f"{hash}"
-            except:
-                pass
-
-            try:
-                hash = hashlib.md5(await response.read()).hexdigest()
-                return f"{hash}"
-            except:
-                pass
-
-
 def get_media_urls_from_message(message: discord.Message):
     image_urls = []
     video_urls = []
@@ -216,6 +199,22 @@ async def get_media_hashes_from_message(message: discord.Message):
 
     threads = []
     results = {}
+
+    async def hash_external_link(link: str):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(link) as response:
+                try:
+                    image = Image.open(io.BytesIO(await response.read()))
+                    hash = imagehash.average_hash(image)
+                    return f"{hash}"
+                except:
+                    pass
+
+                try:
+                    hash = hashlib.md5(await response.read()).hexdigest()
+                    return f"{hash}"
+                except:
+                    pass
 
     def generate_hash(*, url):
         loop = asyncio.new_event_loop()

@@ -290,6 +290,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             return
         if channel.id == (reflect_channel_id := settings.get("reflect_channel_id")):
             return
+        if not isinstance(message.author, discord.Member):
+            return
         for role in message.author.roles:
             if role.id in settings.get("ignored_role_ids"):
                 return
@@ -349,7 +351,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             if url in handled_urls:
                 continue
 
-            hash = await helper.hash_external_link(url)
+            hash = results[url]
 
             if not primary_reflection:
                 dprint(
@@ -393,7 +395,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             if url in handled_urls:
                 continue
 
-            hash = await helper.hash_external_link(url)
+            hash = results[url]
 
             if not primary_reflection:
                 dprint(
