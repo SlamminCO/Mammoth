@@ -31,6 +31,7 @@ class StorageObject:
 
 def safe_read(cog: str, guild: discord.Guild, key: str):
     from helper import DPrinter
+
     spammy_dprint_instance = DPrinter(__name__)
     spammy_dprint_instance.allow_printing = SETTINGS["spammyDebugPrinting"]
     sdprint = spammy_dprint_instance.dprint
@@ -78,10 +79,11 @@ def safe_read(cog: str, guild: discord.Guild, key: str):
 @asynccontextmanager
 async def safe_edit(cog: str, guild: discord.Guild, key: str):
     from helper import DPrinter
+
     spammy_dprint_instance = DPrinter(__name__)
     spammy_dprint_instance.allow_printing = SETTINGS["spammyDebugPrinting"]
     sdprint = spammy_dprint_instance.dprint
-    
+
     base_path = f"{DATA_PATH}/{cog}/{guild.id}"
     file_path = f"{base_path}/{key}.pickle"
 
