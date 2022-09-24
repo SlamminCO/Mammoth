@@ -1,6 +1,6 @@
 from PIL import Image
-from storage import safe_read
-from shared_classes import HashBlacklistObject
+from storage import safe_read, safe_edit
+from shared_classes import HashBlacklistObject, URLToHashCache
 import sys
 import aiohttp
 import hashlib
@@ -10,9 +10,20 @@ import re
 import datetime
 import json
 import discord
+import threading
+import asyncio
 
 
-SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".JPG", ".JPEG", ".png", ".PNG", ".gif", ".gifv"]
+SUPPORTED_IMAGE_EXTENSIONS = [
+    ".jpg",
+    ".jpeg",
+    ".JPG",
+    ".JPEG",
+    ".png",
+    ".PNG",
+    ".gif",
+    ".gifv",
+]
 SUPPORTED_VIDEO_EXTENSIONS = [".webm", ".mp4", ".mov"]
 SUPPORTED_AUDIO_EXTENSIONS = [".wav", ".mp3", ".ogg", ".flac"]
 
@@ -36,16 +47,23 @@ def has_complex_extension(link: str, extensions: list):
 
     return False
 
+
 def link_is_image(link: str):
-    return link.endswith(tuple(SUPPORTED_IMAGE_EXTENSIONS)) or has_complex_extension(link, SUPPORTED_IMAGE_EXTENSIONS)
+    return link.endswith(tuple(SUPPORTED_IMAGE_EXTENSIONS)) or has_complex_extension(
+        link, SUPPORTED_IMAGE_EXTENSIONS
+    )
 
 
 def link_is_video(link: str):
-    return link.endswith(tuple(SUPPORTED_VIDEO_EXTENSIONS)) or has_complex_extension(link, SUPPORTED_VIDEO_EXTENSIONS)
+    return link.endswith(tuple(SUPPORTED_VIDEO_EXTENSIONS)) or has_complex_extension(
+        link, SUPPORTED_VIDEO_EXTENSIONS
+    )
 
 
 def link_is_audio(link: str):
-    return link.endswith(tuple(SUPPORTED_AUDIO_EXTENSIONS)) or has_complex_extension(link, SUPPORTED_AUDIO_EXTENSIONS)
+    return link.endswith(tuple(SUPPORTED_AUDIO_EXTENSIONS)) or has_complex_extension(
+        link, SUPPORTED_AUDIO_EXTENSIONS
+    )
 
 
 def is_blacklisted(guild: discord.Guild, hash: str):
@@ -74,6 +92,216 @@ async def hash_external_link(link: str):
                 return f"{hash}"
             except:
                 pass
+
+
+def get_media_urls_from_message(message: discord.Message):
+    image_urls = []
+    video_urls = []
+    audio_urls = []
+    standard_urls = []
+    content_urls = []
+
+    def sort_url(url: str):
+        if link_is_image(url):
+            if url in image_urls:
+                return
+
+            image_urls.append(url)
+        elif link_is_video(url):
+            if url in video_urls:
+                return
+
+            video_urls.append(url)
+        elif link_is_audio(url):
+            if url in audio_urls:
+                return
+
+            audio_urls.append(url)
+        else:
+            if url in standard_urls:
+                return
+
+            standard_urls.append(url)
+
+    # Sort Attachment URLs
+
+    for attachment in message.attachments:
+        if attachment.content_type.find("image") != -1:
+            if attachment.url in image_urls:
+                continue
+
+            image_urls.append(attachment.url)
+        elif attachment.content_type.find("video") != -1:
+            if attachment.url in video_urls:
+                continue
+
+            video_urls.append(attachment.url)
+        elif attachment.content_type.find("audio") != -1:
+            if attachment.url in audio_urls:
+                continue
+
+            audio_urls.append(attachment.url)
+        else:
+            sort_url(attachment.url)
+
+    # Sort Embed URLs
+
+    for embed in message.embeds:
+        if embed.title:
+            for url in get_links(embed.title):
+                sort_url(url)
+        if embed.description:
+            for url in get_links(embed.description):
+                sort_url(url)
+        if embed.url:
+            sort_url(embed.url)
+        if embed.footer:
+            for url in get_links(embed.footer):
+                sort_url(url)
+        if embed.image:
+            if embed.image.url:
+                sort_url(embed.image.url)
+        if embed.thumbnail:
+            if embed.thumbnail.url:
+                sort_url(embed.thumbnail.url)
+        if embed.video:
+            if embed.video.url:
+                sort_url(embed.video.url)
+        if embed.provider:
+            if embed.provider.name:
+                for url in get_links(embed.provider.name):
+                    sort_url(url)
+            if embed.provider.url:
+                sort_url(embed.provider.url)
+        if embed.fields:
+            for field in embed.fields:
+                if field.name:
+                    for url in get_links(field.name):
+                        sort_url(url)
+                if field.value:
+                    for url in get_links(field.value):
+                        sort_url(url)
+
+    # Sort Content URLs
+
+    for url in get_links(message.content):
+        content_urls.append(url)
+        sort_url(url)
+
+    return image_urls, video_urls, audio_urls, standard_urls, content_urls
+
+
+async def get_media_hashes_from_message(message: discord.Message):
+    dprint = DPrinter(__name__).dprint
+    guild = message.guild
+    (
+        image_urls,
+        video_urls,
+        audio_urls,
+        standard_urls,
+        content_urls,
+    ) = get_media_urls_from_message(message)
+
+    # Gather Hashes
+
+    def get_cached_hash(url):
+        url_to_hash = safe_read("global", guild, "url_to_hash")
+
+        if not (url_to_hash := url_to_hash.get()):
+            return
+        if not isinstance(url_to_hash, URLToHashCache):
+            return
+
+        return url_to_hash.get(url)
+
+    threads = []
+    results = {}
+
+    def generate_hash(*, url):
+        loop = asyncio.new_event_loop()
+
+        results[url] = loop.run_until_complete(hash_external_link(url))
+
+    for url in image_urls:
+        if not (hash := get_cached_hash(url)):
+            threads.append(threading.Thread(target=generate_hash, kwargs={"url": url}))
+
+            dprint(
+                f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+            )
+            continue
+
+        dprint(
+            f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+        )
+
+        results[url] = hash
+    for url in video_urls:
+        if not (hash := get_cached_hash(url)):
+            threads.append(threading.Thread(target=generate_hash, kwargs={"url": url}))
+
+            dprint(
+                f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+            )
+            continue
+
+        dprint(
+            f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+        )
+
+        results[url] = hash
+    for url in audio_urls:
+        if not (hash := get_cached_hash(url)):
+            threads.append(threading.Thread(target=generate_hash, kwargs={"url": url}))
+
+            dprint(
+                f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+            )
+            continue
+
+        dprint(
+            f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+        )
+
+        results[url] = hash
+
+    for thread in threads:
+        thread.start()
+
+    # Wait For Threads To Finish
+
+    while True:
+        threads_still_alive = False
+
+        for thread in threads:
+            if thread.is_alive():
+                threads_still_alive = True
+
+        if not threads_still_alive:
+            dprint(f"Threads completed! Guild: [{guild}] Message: [{message.id}]")
+            break
+
+        dprint(f"Waiting for threads. Guild: [{guild}] Message: [{message.id}]")
+
+        await asyncio.sleep(1)
+
+    # Cache Hashes
+
+    async with safe_edit("global", guild, "url_to_hash") as url_to_hash_storage_object:
+        if not (url_to_hash := url_to_hash_storage_object.get()):
+            url_to_hash = URLToHashCache()
+        if not isinstance(url_to_hash, URLToHashCache):
+            url_to_hash = URLToHashCache()
+
+        for url in results:
+            if not url_to_hash.get(url):
+                url_to_hash.set(url, results[url])
+
+        url_to_hash_storage_object.set(url_to_hash)
+
+    # Return Results
+
+    return (results, (image_urls, video_urls, audio_urls, standard_urls, content_urls))
 
 
 class DPrinter:

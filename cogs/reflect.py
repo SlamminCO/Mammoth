@@ -4,11 +4,9 @@ from discord.ext import commands
 from main import Mammoth
 from storage import safe_edit, safe_read
 from discord.ui import Button, View, Select
-# from shared_classes import HashBlacklistButton
+from shared_classes import HashBlacklistButton
 import discord
 import helper
-import threading
-import asyncio
 import json
 
 
@@ -46,17 +44,6 @@ class ReflectCogSettingsObject:
 
     def set(self, key: str, value):
         self.settings[key] = value
-
-
-class URLToHashCache:
-    def __init__(self):
-        self.url_to_hash = {}
-
-    def get(self, url: str):
-        return self.url_to_hash.get(url)
-
-    def set(self, url: str, hash: str):
-        self.url_to_hash[url] = hash
 
 
 class ReflectionDeleteButton(Button):
@@ -108,12 +95,12 @@ class ReflectionView(View):
             label="Jump", style=discord.ButtonStyle.link, url=message.jump_url
         )
         self.delete_button = ReflectionDeleteButton(self.message, self.jump_button)
-        # self.blacklist_button = HashBlacklistButton(self.message, self.hash)
+        self.blacklist_button = HashBlacklistButton(self.message, self.hash)
 
         self.add_item(self.delete_button)
 
-        # if hash:
-        #     self.add_item(self.blacklist_button)
+        if hash:
+            self.add_item(self.blacklist_button)
 
         self.add_item(self.jump_button)
 
@@ -165,16 +152,16 @@ class CompactImageReflectionView(View):
                 self.media_select.append_option(new_select_option)
                 self.value_to_part[f"{i}"] = part
 
-            # self.blacklist_button = HashBlacklistButton(
-            #     self.message, self.value_to_part["0"].hash
-            # )
+            self.blacklist_button = HashBlacklistButton(
+                self.message, self.value_to_part["0"].hash
+            )
 
             async def media_select_callback(interaction: discord.Interaction):
-                # self.blacklist_button.hash = self.value_to_part[
-                #     self.media_select.values[0]
-                # ].hash
+                self.blacklist_button.hash = self.value_to_part[
+                    self.media_select.values[0]
+                ].hash
 
-                # self.blacklist_button.update_mode()
+                self.blacklist_button.update_mode()
 
                 for option in self.media_select.options:
                     if option.value != self.media_select.values[0]:
@@ -190,13 +177,13 @@ class CompactImageReflectionView(View):
             self.media_select.callback = media_select_callback
 
             self.add_item(self.media_select)
-        # else:
-        #     self.blacklist_button = HashBlacklistButton(
-        #         self.message, compact_reflection_parts[0].hash
-        #     )
+        else:
+            self.blacklist_button = HashBlacklistButton(
+                self.message, compact_reflection_parts[0].hash
+            )
 
         self.add_item(self.delete_button)
-        # self.add_item(self.blacklist_button)
+        self.add_item(self.blacklist_button)
         self.add_item(self.jump_button)
 
 
@@ -309,213 +296,9 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         if not (reflect_channel := guild.get_channel(reflect_channel_id)):
             return
 
-        image_urls = []
-        video_urls = []
-        audio_urls = []
-        standard_urls = []
-
-        def sort_url(url: str):
-            if helper.link_is_image(url):
-                if url in image_urls:
-                    return
-
-                image_urls.append(url)
-            elif helper.link_is_video(url):
-                if url in video_urls:
-                    return
-
-                video_urls.append(url)
-            elif helper.link_is_audio(url):
-                if url in audio_urls:
-                    return
-
-                audio_urls.append(url)
-            else:
-                if url in standard_urls:
-                    return
-
-                standard_urls.append(url)
-
-        # Sort Attachment URLs
-
-        for attachment in message.attachments:
-            if attachment.content_type.find("image") != -1:
-                if attachment.url in image_urls:
-                    continue
-
-                image_urls.append(attachment.url)
-            elif attachment.content_type.find("video") != -1:
-                if attachment.url in video_urls:
-                    continue
-
-                video_urls.append(attachment.url)
-            elif attachment.content_type.find("audio") != -1:
-                if attachment.url in audio_urls:
-                    continue
-
-                audio_urls.append(attachment.url)
-            else:
-                sort_url(attachment.url)
-
-        # Sort Embed URLs
-
-        for embed in message.embeds:
-            if embed.title:
-                for url in helper.get_links(embed.title):
-                    sort_url(url)
-            if embed.description:
-                for url in helper.get_links(embed.description):
-                    sort_url(url)
-            if embed.url:
-                sort_url(embed.url)
-            if embed.footer:
-                for url in helper.get_links(embed.footer):
-                    sort_url(url)
-            if embed.image:
-                if embed.image.url:
-                    sort_url(embed.image.url)
-            if embed.thumbnail:
-                if embed.thumbnail.url:
-                    sort_url(embed.thumbnail.url)
-            if embed.video:
-                if embed.video.url:
-                    sort_url(embed.video.url)
-            if embed.provider:
-                if embed.provider.name:
-                    for url in helper.get_links(embed.provider.name):
-                        sort_url(url)
-                if embed.provider.url:
-                    sort_url(embed.provider.url)
-            if embed.fields:
-                for field in embed.fields:
-                    if field.name:
-                        for url in helper.get_links(field.name):
-                            sort_url(url)
-                    if field.value:
-                        for url in helper.get_links(field.value):
-                            sort_url(url)
-
-        content_urls = []
-
-        # Sort Content URLs
-
-        for url in helper.get_links(message.content):
-            content_urls.append(url)
-            sort_url(url)
-
+        results, urls = await helper.get_media_hashes_from_message(message)
+        image_urls, video_urls, audio_urls, standard_urls, content_urls = urls
         handled_urls = []
-
-        # Gather Hashes
-
-        async def get_cached_hash(url):
-            url_to_hash = safe_read("global", guild, "url_to_hash")
-
-            if not (url_to_hash := url_to_hash.get()):
-                return
-            if not isinstance(url_to_hash, URLToHashCache):
-                return
-
-            return url_to_hash.get(url)
-
-        total_thread_time_start = time()
-
-        threads = []
-        results = {}
-
-        def generate_hash(*, url):
-            hash_generation_time_start = time()
-
-            loop = asyncio.new_event_loop()
-
-            results[url] = loop.run_until_complete(helper.hash_external_link(url))
-            timings[f"HASH_{url}"] = time() - hash_generation_time_start
-
-        for url in image_urls:
-            if not (hash := await get_cached_hash(url)):
-                threads.append(
-                    threading.Thread(target=generate_hash, kwargs={"url": url})
-                )
-
-                dprint(
-                    f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
-                )
-                continue
-
-            dprint(
-                f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
-            )
-
-            results[url] = hash
-        for url in video_urls:
-            if not (hash := await get_cached_hash(url)):
-                threads.append(
-                    threading.Thread(target=generate_hash, kwargs={"url": url})
-                )
-
-                dprint(
-                    f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
-                )
-                continue
-
-            dprint(
-                f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
-            )
-
-            results[url] = hash
-        for url in audio_urls:
-            if not (hash := await get_cached_hash(url)):
-                threads.append(
-                    threading.Thread(target=generate_hash, kwargs={"url": url})
-                )
-
-                dprint(
-                    f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
-                )
-                continue
-
-            dprint(
-                f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
-            )
-
-            results[url] = hash
-
-        for thread in threads:
-            thread.start()
-
-        # Wait For Threads To Finish
-
-        while True:
-            threads_still_alive = False
-
-            for thread in threads:
-                if thread.is_alive():
-                    threads_still_alive = True
-
-            if not threads_still_alive:
-                dprint(f"Threads completed! Guild: [{guild}] Message: [{message.id}]")
-                break
-
-            dprint(f"Waiting for threads. Guild: [{guild}] Message: [{message.id}]")
-
-            await asyncio.sleep(1)
-
-        timings["thread_total"] = time() - total_thread_time_start
-
-        # Cache Hashes
-
-        async with safe_edit("global", guild, "url_to_hash") as url_to_hash_storage_object:
-            if not (url_to_hash := url_to_hash_storage_object.get()):
-                url_to_hash = URLToHashCache()
-            if not isinstance(url_to_hash, URLToHashCache):
-                url_to_hash = URLToHashCache()
-
-            for url in results:
-                if not url_to_hash.get(url):
-                    url_to_hash.set(url, results[url])
-
-            url_to_hash_storage_object.set(url_to_hash)
-
-            sdprint(json.dumps(url_to_hash.url_to_hash, indent=4))
 
         # Send All Reflections
 
