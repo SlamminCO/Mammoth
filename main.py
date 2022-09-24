@@ -13,9 +13,9 @@ class Mammoth(Bot):
         super().__init__("mm!", intents=Intents.all())
 
     async def on_ready(self):
-        dprint(f"Logged in as {self.user}")
+        dprint(f"Logged in as {self.user}\nInvite: https://discord.com/api/oauth2/authorize?client_id={self.user.id}&permissions=8&scope=bot%20applications.commands")
 
-    async def setup_hook(self) -> None:
+    async def setup_hook(self):
         await self.load_cogs()
 
     async def load_cogs(self):
