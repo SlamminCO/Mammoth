@@ -3,7 +3,7 @@ import os
 FILES_TO_REMOVE = [
     "./dockerfile",
     "./build.bat",
-    "./run,bat",
+    "./run.bat",
     "settings.json",
     "token.json",
 ]
