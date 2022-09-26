@@ -646,6 +646,42 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     )
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.command(
+        name="channel", description="Change where to send media reflections."
+    )
+    @discord.app_commands.describe(reflect_channel="Where to send media reflections.")
+    async def reflect_channel(
+        self, interaction: discord.Interaction, reflect_channel: discord.TextChannel
+    ):
+        guild = interaction.guild
+
+        await interaction.response.defer(thinking=True, ephemeral=True)
+
+        async with safe_edit(COG, guild, "settings") as settings_storage_object:
+            if not (settings := settings_storage_object.get()):
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
+                return
+            if not isinstance(settings, ReflectCogSettingsObject):
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
+                return
+            if not settings.get("enabled"):
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
+                return
+
+            settings.set("reflect_channel_id", reflect_channel.id)
+            settings_storage_object.set(settings)
+
+        await interaction.followup.send(
+            f"Reflect channel changed to {reflect_channel.mention}!", ephemeral=True
+        )
+
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @reflect_ignore_group.command(
         name="list", description="List ignored channels and roles."
     )
