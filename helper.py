@@ -203,15 +203,17 @@ async def get_media_hashes_from_message(message: discord.Message):
     async def hash_external_link(link: str):
         async with aiohttp.ClientSession() as session:
             async with session.get(link) as response:
+                data = await response.read()
+
                 try:
-                    image = Image.open(io.BytesIO(await response.read()))
+                    image = Image.open(io.BytesIO(data))
                     hash = imagehash.average_hash(image)
                     return f"{hash}"
                 except:
                     pass
 
                 try:
-                    hash = hashlib.md5(await response.read()).hexdigest()
+                    hash = hashlib.md5(data).hexdigest()
                     return f"{hash}"
                 except:
                     pass
@@ -231,7 +233,7 @@ async def get_media_hashes_from_message(message: discord.Message):
             continue
 
         dprint(
-            f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+            f"Cache found! Hash: [{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
         )
 
         results[url] = hash
@@ -245,7 +247,7 @@ async def get_media_hashes_from_message(message: discord.Message):
             continue
 
         dprint(
-            f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+            f"Cache found! Hash: [{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
         )
 
         results[url] = hash
@@ -259,7 +261,7 @@ async def get_media_hashes_from_message(message: discord.Message):
             continue
 
         dprint(
-            f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+            f"Cache found! Hash: [{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
         )
 
         results[url] = hash
