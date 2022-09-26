@@ -8,10 +8,10 @@ import pickle
 import json
 
 
-DATA_PATH = "/mammoth_bot_data"
-
 with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
+
+DATA_PATH = SETTINGS["dataPath"]
 
 
 class StorageObject:
