@@ -1,4 +1,3 @@
-from time import time
 from helper import DPrinter
 from discord.ext import commands
 from main import Mammoth
@@ -46,6 +45,33 @@ class ReflectCogSettingsObject:
         self.settings[key] = value
 
 
+class ReflectionDismissButton(Button):
+    def __init__(
+        self, message: discord.Message, appended_messages: list[discord.Message]
+    ):
+        super().__init__(label="Close", style=discord.ButtonStyle.blurple)
+
+        self.message = message
+        self.appended_messages = appended_messages
+
+    async def callback(self, interaction: discord.Interaction):
+        if not self.message.channel.permissions_for(interaction.user).manage_messages:
+            return await interaction.response.send_message(
+                f"You do not have permission to manage messages in {self.message.channel.mention}!"
+            )
+
+        await interaction.response.edit_message(
+            content="Reflection dismissed!", embed=None, view=None
+        )
+        await interaction.message.delete(delay=5)
+
+        for additional_alert in self.appended_messages:
+            try:
+                await additional_alert.delete()
+            except:
+                pass
+
+
 class ReflectionDeleteButton(Button):
     def __init__(self, message: discord.Message, jump_button: Button):
         super().__init__(label="Delete", style=discord.ButtonStyle.red)
@@ -90,13 +116,16 @@ class ReflectionView(View):
 
         self.message = message
         self.hash = hash
+        self.appended_messages = []
 
+        self.dismiss_button = ReflectionDismissButton(self.message, self.appended_messages)
         self.jump_button = Button(
             label="Jump", style=discord.ButtonStyle.link, url=message.jump_url
         )
         self.delete_button = ReflectionDeleteButton(self.message, self.jump_button)
         self.blacklist_button = HashBlacklistButton(self.message, self.hash)
 
+        self.add_item(self.dismiss_button)
         self.add_item(self.delete_button)
 
         if hash:
@@ -135,6 +164,7 @@ class CompactImageReflectionView(View):
         self.parts = compact_reflection_parts
         self.value_to_part = {}
 
+        self.dismiss_button = ReflectionDismissButton(self.message, [])
         self.jump_button = Button(
             label="Jump", style=discord.ButtonStyle.link, url=message.jump_url
         )
@@ -182,6 +212,7 @@ class CompactImageReflectionView(View):
                 self.message, compact_reflection_parts[0].hash
             )
 
+        self.add_item(self.dismiss_button)
         self.add_item(self.delete_button)
         self.add_item(self.blacklist_button)
         self.add_item(self.jump_button)
@@ -203,13 +234,16 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         message: discord.Message,
         compact_image_reflection_parts: list[CompactImageReflectionPart],
     ):
+        compact_image_reflection_view = CompactImageReflectionView(
+            message, compact_image_reflection_parts
+        )
         compact_image_reflection = await reflect_channel.send(
             embed=compact_image_reflection_parts[0].embed,
-            view=CompactImageReflectionView(message, compact_image_reflection_parts),
+            view=compact_image_reflection_view,
         )
-        return compact_image_reflection
+        return compact_image_reflection, compact_image_reflection_view
 
-    async def send_primary_reflection(
+    async def send_parent_reflection(
         self,
         *,
         reflect_channel: discord.TextChannel,
@@ -232,18 +266,19 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         if image_url:
             embed.set_image(url=image_url)
 
-        reflect_message = await reflect_channel.send(
+        parent_reflection_view = ReflectionView(message, hash)
+        parent_reflect_message = await reflect_channel.send(
             content=content,
             embed=embed,
-            view=ReflectionView(message, hash),
+            view=parent_reflection_view,
         )
 
-        return reflect_message
+        return parent_reflect_message, parent_reflection_view
 
     async def send_additional_reflection(
         self,
         *,
-        primary_reflection: discord.Message,
+        parent_reflection: discord.Message,
         message: discord.Message,
         url: str,
         hash: str = None,
@@ -260,22 +295,22 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         if image_url:
             embed.set_image(url=image_url)
 
-        additional_reflection = await primary_reflection.reply(
+        additional_reflection_view = ReflectionView(message, hash)
+        additional_reflection = await parent_reflection.reply(
             content=content,
             embed=embed,
-            view=ReflectionView(message, hash),
+            view=additional_reflection_view,
         )
 
-        return additional_reflection
+        return additional_reflection, additional_reflection_view
 
     @commands.Cog.listener(name="on_message")
     async def reflect_on_message(self, message: discord.Message):
-        timings = {}
-        total_time_start = time()
-
         channel = message.channel
 
         if not (guild := message.guild):
+            return
+        if not isinstance(message.author, discord.Member):
             return
 
         settings = safe_read(COG, guild, "settings")
@@ -290,8 +325,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             return
         if channel.id == (reflect_channel_id := settings.get("reflect_channel_id")):
             return
-        if not isinstance(message.author, discord.Member):
-            return
         for role in message.author.roles:
             if role.id in settings.get("ignored_role_ids"):
                 return
@@ -301,17 +334,162 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         results, urls = await helper.get_media_hashes_from_message(message)
         image_urls, video_urls, audio_urls, standard_urls, content_urls = urls
         handled_urls = []
-
-        # Send All Reflections
-
-        send_reflection_total_start = time()
-
-        primary_reflection = None
-
-        # Process Images
-
+        parent_reflection = None
         compact_image_reflection_parts = []
 
+        parent_reflection = await self.send_compact_image_reflections(message, guild, reflect_channel, results, image_urls, handled_urls, compact_image_reflection_parts, parent_reflection)
+        parent_reflection = await self.send_video_reflections(message, guild, reflect_channel, results, video_urls, handled_urls, parent_reflection)
+        parent_reflection = await self.send_audio_reflections(message, guild, reflect_channel, results, audio_urls, handled_urls, parent_reflection)
+        await self.send_content_url_reflections(message, guild, reflect_channel, content_urls, handled_urls, parent_reflection)
+
+        dprint(f"Image URLs: {json.dumps(image_urls, indent=4)}")
+        dprint(f"Video URLs: {json.dumps(video_urls, indent=4)}")
+        dprint(f"Audio URLs: {json.dumps(audio_urls, indent=4)}")
+        dprint(f"Standard URLs: {json.dumps(standard_urls, indent=4)}")
+        dprint(f"Handled URLs: {json.dumps(handled_urls, indent=4)}")
+
+    async def send_content_url_reflections(self, message, guild, reflect_channel, content_urls, handled_urls, parent_reflection):
+        for url in content_urls:
+            dprint(
+                f"Processing content URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
+            )
+
+            if url in handled_urls:
+                continue
+
+            if not parent_reflection:
+                dprint(
+                    f"Sending parent content reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
+                )
+
+                (
+                    parent_reflection,
+                    parent_reflection_view,
+                ) = await self.send_parent_reflection(
+                    reflect_channel=reflect_channel, message=message, hash=None, url=url
+                )
+
+                parent_reflection_view.appended_messages.append(
+                    await parent_reflection.reply(f"{url}")
+                )
+            else:
+                dprint(
+                    f"Sending additional content reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
+                )
+
+                (
+                    additional_reflection_message,
+                    additional_reflection_view,
+                ) = await self.send_additional_reflection(
+                    parent_reflection=parent_reflection,
+                    message=message,
+                    hash=None,
+                    url=url,
+                )
+
+                additional_reflection_view.appended_messages.append(
+                    await additional_reflection_message.reply(f"{url}")
+                )
+
+            handled_urls.append(url)
+
+    async def send_audio_reflections(self, message, guild, reflect_channel, results, audio_urls, handled_urls, parent_reflection):
+        for url in audio_urls:
+            dprint(
+                f"Processing audio URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
+            )
+
+            if url in handled_urls:
+                continue
+
+            hash = results[url]
+
+            if not parent_reflection:
+                dprint(
+                    f"Sending parent audio reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
+                )
+
+                parent_reflection, reflection_view = await self.send_parent_reflection(
+                    reflect_channel=reflect_channel,
+                    message=message,
+                    hash=hash,
+                    url=url,
+                )
+
+                reflection_view.appended_messages.append(
+                    await parent_reflection.reply(f"{url}")
+                )
+            else:
+                dprint(
+                    f"Sending additional audio reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
+                )
+
+                (
+                    additional_reflection_message,
+                    additional_reflection_view,
+                ) = await self.send_additional_reflection(
+                    parent_reflection=parent_reflection,
+                    message=message,
+                    hash=hash,
+                    url=url,
+                )
+
+                additional_reflection_view.appended_messages.append(
+                    await additional_reflection_message.reply(f"{url}")
+                )
+
+            handled_urls.append(url)
+        return parent_reflection
+
+    async def send_video_reflections(self, message, guild, reflect_channel, results, video_urls, handled_urls, parent_reflection):
+        for url in video_urls:
+            dprint(
+                f"Processing video URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
+            )
+
+            if url in handled_urls:
+                continue
+
+            hash = results[url]
+
+            if not parent_reflection:
+                dprint(
+                    f"Sending parent video reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
+                )
+
+                parent_reflection, reflection_view = await self.send_parent_reflection(
+                    reflect_channel=reflect_channel,
+                    message=message,
+                    hash=hash,
+                    url=url,
+                )
+
+                reflection_view.appended_messages.append(
+                    await parent_reflection.reply(f"{url}")
+                )
+            else:
+                dprint(
+                    f"Sending additional video reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
+                )
+
+                (
+                    additional_reflection_message,
+                    additional_reflection_view,
+                ) = await self.send_additional_reflection(
+                    parent_reflection=parent_reflection,
+                    message=message,
+                    hash=hash,
+                    url=url,
+                )
+
+                additional_reflection_view.appended_messages.append(
+                    await additional_reflection_message.reply(f"{url}")
+                )
+
+            handled_urls.append(url)
+        return parent_reflection
+
+    async def send_compact_image_reflections(self, message, guild, reflect_channel, results, image_urls, handled_urls, compact_image_reflection_parts, parent_reflection):
         for url in image_urls:
             dprint(
                 f"Processing image URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
@@ -333,152 +511,13 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                 f"Sending compact reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
             )
 
-            primary_reflection = await self.send_compact_image_reflection(
+            parent_reflection = await self.send_compact_image_reflection(
                 reflect_channel=reflect_channel,
                 message=message,
                 compact_image_reflection_parts=compact_image_reflection_parts,
             )
-
-        # Process Videos
-
-        for url in video_urls:
-            dprint(
-                f"Processing video URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
-            )
-
-            reflection_send_start = time()
-
-            if url in handled_urls:
-                continue
-
-            hash = results[url]
-
-            if not primary_reflection:
-                dprint(
-                    f"Sending primary video reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
-                )
-
-                reflect_message = await self.send_primary_reflection(
-                    reflect_channel=reflect_channel,
-                    message=message,
-                    hash=hash,
-                    url=url,
-                )
-                primary_reflection = reflect_message
-                await reflect_message.reply(f"{url}")
-            else:
-                dprint(
-                    f"Sending additional video reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
-                )
-
-                reflect_message = await self.send_additional_reflection(
-                    primary_reflection=primary_reflection,
-                    message=message,
-                    hash=hash,
-                    url=url,
-                )
-                await reflect_message.reply(f"{url}")
-
-            handled_urls.append(url)
-
-            timings[f"REFLECT_{url}"] = time() - reflection_send_start
-
-        # Process Audio
-
-        for url in audio_urls:
-            dprint(
-                f"Processing audio URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
-            )
-
-            reflection_send_start = time()
-
-            if url in handled_urls:
-                continue
-
-            hash = results[url]
-
-            if not primary_reflection:
-                dprint(
-                    f"Sending primary audio reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
-                )
-
-                reflect_message = await self.send_primary_reflection(
-                    reflect_channel=reflect_channel,
-                    message=message,
-                    hash=hash,
-                    url=url,
-                )
-                primary_reflection = reflect_message
-                await reflect_message.reply(f"{url}")
-            else:
-                dprint(
-                    f"Sending additional audio reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
-                )
-
-                reflect_message = await self.send_additional_reflection(
-                    primary_reflection=primary_reflection,
-                    message=message,
-                    hash=hash,
-                    url=url,
-                )
-                await reflect_message.reply(f"{url}")
-
-            handled_urls.append(url)
-
-            timings[f"REFLECT_{url}"] = time() - reflection_send_start
-
-        # Process Content URLs
-
-        for url in content_urls:
-            dprint(
-                f"Processing content URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
-            )
-
-            reflection_send_start = time()
-
-            if url in handled_urls:
-                continue
-
-            if not primary_reflection:
-                dprint(
-                    f"Sending primary content reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
-                )
-
-                reflect_message = await self.send_primary_reflection(
-                    reflect_channel=reflect_channel, message=message, hash=None, url=url
-                )
-                primary_reflection = reflect_message
-                await reflect_message.reply(f"{url}")
-            else:
-                dprint(
-                    f"Sending additional content reflection URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
-                )
-
-                reflect_message = await self.send_additional_reflection(
-                    primary_reflection=primary_reflection,
-                    message=message,
-                    hash=None,
-                    url=url,
-                )
-                await reflect_message.reply(f"{url}")
-
-            handled_urls.append(url)
-
-            timings[f"REFLECT_{url}"] = time() - reflection_send_start
-
-        timings["send_reflection_total"] = time() - send_reflection_total_start
-
-        dprint(f"Image URLs: {json.dumps(image_urls, indent=4)}")
-        dprint(f"Video URLs: {json.dumps(video_urls, indent=4)}")
-        dprint(f"Audio URLs: {json.dumps(audio_urls, indent=4)}")
-        dprint(f"Standard URLs: {json.dumps(standard_urls, indent=4)}")
-        dprint(f"Handled URLs: {json.dumps(handled_urls, indent=4)}")
-
-        timings["total"] = time() - total_time_start
-
-        dprint(
-            f"Reflection timings for {guild} message {message.id}: {json.dumps(timings, indent=4)}"
-        )
+            
+        return parent_reflection
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(
