@@ -48,7 +48,13 @@ class AlertsCogSettingsObject:
 
 
 class CompactImageAlertPart:
-    def __init__(self, url: str, hash: str, message: discord.Message, flaggers: list[discord.User]):
+    def __init__(
+        self,
+        url: str,
+        hash: str,
+        message: discord.Message,
+        flaggers: list[discord.User],
+    ):
         self.url = url
         self.hash = hash
         self.message = message
@@ -239,7 +245,7 @@ class SubmitButton(Button):
         alerts_channel: discord.TextChannel,
         flaggers: list[discord.Member],
         alert_threshold: int,
-        mod_role: discord.Role
+        mod_role: discord.Role,
     ):
         super().__init__(label="Submit", style=discord.ButtonStyle.green)
 
@@ -300,7 +306,9 @@ class SubmitButton(Button):
                     message=self.message,
                     hash=None,
                     url=url,
-                    content=f"🚨 {self.mod_role.mention}" if len(self.flaggers) >= self.alert_threshold else ""
+                    content=f"🚨 {self.mod_role.mention}"
+                    if len(self.flaggers) >= self.alert_threshold
+                    else "",
                 )
                 alert_message_view.appended_messages.append(
                     await self.parent_alert_message.reply(f"{url}")
@@ -333,7 +341,9 @@ class SubmitButton(Button):
                     message=self.message,
                     hash=hash,
                     url=url,
-                    content=f"🚨 {self.mod_role.mention}" if len(self.flaggers) >= self.alert_threshold else ""
+                    content=f"🚨 {self.mod_role.mention}"
+                    if len(self.flaggers) >= self.alert_threshold
+                    else "",
                 )
                 alert_message_view.appended_messages.append(
                     await self.parent_alert_message.reply(f"{url}")
@@ -366,7 +376,9 @@ class SubmitButton(Button):
                     message=self.message,
                     hash=hash,
                     url=url,
-                    content=f"🚨 {self.mod_role.mention}" if len(self.flaggers) >= self.alert_threshold else ""
+                    content=f"🚨 {self.mod_role.mention}"
+                    if len(self.flaggers) >= self.alert_threshold
+                    else "",
                 )
                 alert_message_view.appended_messages.append(
                     await self.parent_alert_message.reply(f"{url}")
@@ -403,7 +415,9 @@ class SubmitButton(Button):
                 self.message, compact_image_alert_parts
             )
             self.parent_alert_message = await self.alerts_channel.send(
-                content=f"🚨 {self.mod_role.mention}" if len(self.flaggers) >= self.alert_threshold else "",
+                content=f"🚨 {self.mod_role.mention}"
+                if len(self.flaggers) >= self.alert_threshold
+                else "",
                 embed=compact_image_alert_parts[0].embed,
                 view=self.parent_alert_view,
             )
@@ -466,7 +480,7 @@ class SubmitButton(Button):
                 value="".join([f"{user.mention} " for user in self.flaggers]),
                 inline=False,
             )
-        
+
         embed.add_field(name="URL", value=url, inline=False)
 
         if hash:
@@ -519,11 +533,15 @@ class SubmitReportView(View):
         alert_emoji_str: str,
         flaggers: list[discord.User],
         alert_threshold: int,
-        mod_role: discord.Role
+        mod_role: discord.Role,
     ):
         super().__init__(timeout=None)
 
-        self.add_item(SubmitButton(message, reporter, alerts_channel, flaggers, alert_threshold, mod_role))
+        self.add_item(
+            SubmitButton(
+                message, reporter, alerts_channel, flaggers, alert_threshold, mod_role
+            )
+        )
         self.add_item(CancelButton(message, reporter, alert_emoji_str))
 
 
@@ -583,16 +601,26 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             return
         if not (mod_role := guild.get_role(mod_role_id)):
             return
-        
+
         flaggers = []
-        
+
         for reaction in [
-            reaction for reaction in message.reactions if str(reaction.emoji) == alert_emoji_str
+            reaction
+            for reaction in message.reactions
+            if str(reaction.emoji) == alert_emoji_str
         ]:
-            flaggers = [user async for user in reaction.users() if user != self.bot.user]
+            flaggers = [
+                user async for user in reaction.users() if user != self.bot.user
+            ]
 
         submit_report_view = SubmitReportView(
-            message, reporter, alerts_channel, alert_emoji_str, flaggers, alert_threshold, mod_role
+            message,
+            reporter,
+            alerts_channel,
+            alert_emoji_str,
+            flaggers,
+            alert_threshold,
+            mod_role,
         )
         report_prompt = await message.reply(
             f"{reporter.mention} You have initiated a report on this message.\n\nDo you believe the contents of this message violate the server rules?",
