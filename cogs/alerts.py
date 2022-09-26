@@ -640,6 +640,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
     async def handle_alertable_messages(self, message: discord.Message):
         if not (guild := message.guild):
             return
+        if not isinstance(message.author, discord.Member):
+            return
 
         settings = safe_read(COG, guild, "settings")
 
