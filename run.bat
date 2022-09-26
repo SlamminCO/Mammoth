@@ -1,2 +1,3 @@
-docker rm --force mammoth_bot
-docker run -d --name=mammoth_bot --mount source=mammoth_bot_data,destination=/mammoth_bot_data mammoth_bot
+
+docker rm --force swaggy_boi
+docker run --restart=on-failure -d --name=swaggy_boi --mount source=swaggy_boi_data,destination=/swaggy_boi_data swaggy_boi
