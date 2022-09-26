@@ -301,7 +301,7 @@ class SubmitButton(Button):
                 (
                     self.parent_alert_message,
                     alert_message_view,
-                ) = await self.send_primary_alert(
+                ) = await self.send_parent_alert(
                     alerts_channel=self.alerts_channel,
                     message=self.message,
                     hash=None,
@@ -336,7 +336,7 @@ class SubmitButton(Button):
                 (
                     self.parent_alert_message,
                     alert_message_view,
-                ) = await self.send_primary_alert(
+                ) = await self.send_parent_alert(
                     alerts_channel=self.alerts_channel,
                     message=self.message,
                     hash=hash,
@@ -371,7 +371,7 @@ class SubmitButton(Button):
                 (
                     self.parent_alert_message,
                     alert_message_view,
-                ) = await self.send_primary_alert(
+                ) = await self.send_parent_alert(
                     alerts_channel=self.alerts_channel,
                     message=self.message,
                     hash=hash,
@@ -422,7 +422,7 @@ class SubmitButton(Button):
                 view=self.parent_alert_view,
             )
 
-    async def send_primary_alert(
+    async def send_parent_alert(
         self,
         *,
         alerts_channel: discord.TextChannel,
@@ -562,6 +562,14 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             return
         if not (guild := self.bot.get_guild(payload.guild_id)):
             return
+        if not (channel := self.bot.get_channel(payload.channel_id)):
+            return
+        if not (message := await channel.fetch_message(payload.message_id)):
+            return
+        if not isinstance(message.author, discord.Member):
+            return
+        if not (reporter := guild.get_member(payload.user_id)):
+            return
 
         settings = safe_read(COG, guild, "settings")
 
@@ -579,21 +587,16 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             return
         if alerts_channel_id == payload.channel_id:
             return
-        if not (channel := self.bot.get_channel(payload.channel_id)):
-            return
         if not (alerts_channel := self.bot.get_channel(alerts_channel_id)):
             return
-        if not (message := await channel.fetch_message(payload.message_id)):
-            return
-        if isinstance(message.author, discord.Member):
-            for role in message.author.roles:
-                if role.id in settings.get("trusted_role_ids"):
-                    return
+
+        for role in message.author.roles:
+            if role.id in settings.get("trusted_role_ids"):
+                return
+
         if message.author.id in settings.get("trusted_member_ids"):
             return
         if message.channel.id in settings.get("ignored_channel_ids"):
-            return
-        if not (reporter := guild.get_member(payload.user_id)):
             return
         if not isinstance((alert_threshold := settings.get("alert_threshold")), int):
             return
@@ -639,6 +642,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
     @commands.Cog.listener(name="on_message")
     async def handle_alertable_messages(self, message: discord.Message):
         if not (guild := message.guild):
+            return
+        if not isinstance(message.author, discord.Member):
             return
 
         settings = safe_read(COG, guild, "settings")

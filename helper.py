@@ -66,17 +66,6 @@ def link_is_audio(link: str):
     )
 
 
-def is_blacklisted(guild: discord.Guild, hash: str):
-    hash_blacklist = safe_read("global", guild, "hash_blacklist")
-
-    if not (hash_blacklist := hash_blacklist.get()):
-        return False
-    if not isinstance(hash_blacklist, HashBlacklistObject):
-        return False
-
-    return hash_blacklist.blacklisted(hash)
-
-
 def get_media_urls_from_message(message: discord.Message):
     image_urls = []
     video_urls = []
@@ -185,33 +174,23 @@ async def get_media_hashes_from_message(message: discord.Message):
         content_urls,
     ) = get_media_urls_from_message(message)
 
-    # Gather Hashes
-
-    def get_cached_hash(url):
-        url_to_hash = safe_read("global", guild, "url_to_hash")
-
-        if not (url_to_hash := url_to_hash.get()):
-            return
-        if not isinstance(url_to_hash, URLToHashCache):
-            return
-
-        return url_to_hash.get(url)
-
     threads = []
     results = {}
 
     async def hash_external_link(link: str):
         async with aiohttp.ClientSession() as session:
             async with session.get(link) as response:
+                data = await response.read()
+
                 try:
-                    image = Image.open(io.BytesIO(await response.read()))
+                    image = Image.open(io.BytesIO(data))
                     hash = imagehash.average_hash(image)
                     return f"{hash}"
                 except:
                     pass
 
                 try:
-                    hash = hashlib.md5(await response.read()).hexdigest()
+                    hash = hashlib.md5(data).hexdigest()
                     return f"{hash}"
                 except:
                     pass
@@ -221,8 +200,15 @@ async def get_media_hashes_from_message(message: discord.Message):
 
         results[url] = loop.run_until_complete(hash_external_link(url))
 
+    url_to_hash = safe_read("global", guild, "url_to_hash")
+
+    if not (url_to_hash := url_to_hash.get()):
+        url_to_hash = URLToHashCache()
+    if not isinstance(url_to_hash, URLToHashCache):
+        url_to_hash = URLToHashCache()
+
     for url in image_urls:
-        if not (hash := get_cached_hash(url)):
+        if not (hash := url_to_hash.get(url)):
             threads.append(threading.Thread(target=generate_hash, kwargs={"url": url}))
 
             dprint(
@@ -231,12 +217,12 @@ async def get_media_hashes_from_message(message: discord.Message):
             continue
 
         dprint(
-            f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+            f"Cache found! Hash: [{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
         )
 
         results[url] = hash
     for url in video_urls:
-        if not (hash := get_cached_hash(url)):
+        if not (hash := url_to_hash.get(url)):
             threads.append(threading.Thread(target=generate_hash, kwargs={"url": url}))
 
             dprint(
@@ -245,12 +231,12 @@ async def get_media_hashes_from_message(message: discord.Message):
             continue
 
         dprint(
-            f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+            f"Cache found! Hash: [{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
         )
 
         results[url] = hash
     for url in audio_urls:
-        if not (hash := get_cached_hash(url)):
+        if not (hash := url_to_hash.get(url)):
             threads.append(threading.Thread(target=generate_hash, kwargs={"url": url}))
 
             dprint(
@@ -259,7 +245,7 @@ async def get_media_hashes_from_message(message: discord.Message):
             continue
 
         dprint(
-            f"Cache found! Hash: [f{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
+            f"Cache found! Hash: [{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
         )
 
         results[url] = hash
