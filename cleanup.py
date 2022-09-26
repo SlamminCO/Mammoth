@@ -1,6 +1,12 @@
 import os
 
-FILES_TO_REMOVE = ["./dockerfile", "./build.bat", "./run,bat", "settings.json", "token.json"]
+FILES_TO_REMOVE = [
+    "./dockerfile",
+    "./build.bat",
+    "./run,bat",
+    "settings.json",
+    "token.json",
+]
 
 if __name__ == "__main__":
     for file in FILES_TO_REMOVE:

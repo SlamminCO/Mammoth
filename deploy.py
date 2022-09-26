@@ -236,12 +236,12 @@ def main(
         w.write(json.dumps(token, indent=4))
 
     print("Deployment files generated!")
-    
+
     if build:
         print("Building docker image...")
-        
+
         os.system("build.bat")
-        
+
         print("Docker image built!")
     if run:
         print("Running docker image...")
@@ -249,7 +249,6 @@ def main(
         os.system("run.bat")
 
         print("Docker image running!")
-
 
 
 if __name__ == "__main__":
