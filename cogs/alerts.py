@@ -593,7 +593,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         for role in message.author.roles:
             if role.id in settings.get("trusted_role_ids"):
                 return
-                
+
         if message.author.id in settings.get("trusted_member_ids"):
             return
         if message.channel.id in settings.get("ignored_channel_ids"):

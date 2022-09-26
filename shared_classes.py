@@ -118,7 +118,5 @@ class HashBlacklistButton(Button):
             hash_blacklist = HashBlacklistObject()
 
         self.label = (
-            "Unblacklist"
-            if hash_blacklist.blacklisted(self.hash)
-            else "Blacklist"
+            "Unblacklist" if hash_blacklist.blacklisted(self.hash) else "Blacklist"
         )

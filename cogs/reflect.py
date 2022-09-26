@@ -118,7 +118,9 @@ class ReflectionView(View):
         self.hash = hash
         self.appended_messages = []
 
-        self.dismiss_button = ReflectionDismissButton(self.message, self.appended_messages)
+        self.dismiss_button = ReflectionDismissButton(
+            self.message, self.appended_messages
+        )
         self.jump_button = Button(
             label="Jump", style=discord.ButtonStyle.link, url=message.jump_url
         )
@@ -337,10 +339,42 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         parent_reflection = None
         compact_image_reflection_parts = []
 
-        parent_reflection = await self.send_compact_image_reflections(message, guild, reflect_channel, results, image_urls, handled_urls, compact_image_reflection_parts, parent_reflection)
-        parent_reflection = await self.send_video_reflections(message, guild, reflect_channel, results, video_urls, handled_urls, parent_reflection)
-        parent_reflection = await self.send_audio_reflections(message, guild, reflect_channel, results, audio_urls, handled_urls, parent_reflection)
-        await self.send_content_url_reflections(message, guild, reflect_channel, content_urls, handled_urls, parent_reflection)
+        parent_reflection = await self.send_compact_image_reflections(
+            message,
+            guild,
+            reflect_channel,
+            results,
+            image_urls,
+            handled_urls,
+            compact_image_reflection_parts,
+            parent_reflection,
+        )
+        parent_reflection = await self.send_video_reflections(
+            message,
+            guild,
+            reflect_channel,
+            results,
+            video_urls,
+            handled_urls,
+            parent_reflection,
+        )
+        parent_reflection = await self.send_audio_reflections(
+            message,
+            guild,
+            reflect_channel,
+            results,
+            audio_urls,
+            handled_urls,
+            parent_reflection,
+        )
+        await self.send_content_url_reflections(
+            message,
+            guild,
+            reflect_channel,
+            content_urls,
+            handled_urls,
+            parent_reflection,
+        )
 
         dprint(f"Image URLs: {json.dumps(image_urls, indent=4)}")
         dprint(f"Video URLs: {json.dumps(video_urls, indent=4)}")
@@ -348,7 +382,15 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         dprint(f"Standard URLs: {json.dumps(standard_urls, indent=4)}")
         dprint(f"Handled URLs: {json.dumps(handled_urls, indent=4)}")
 
-    async def send_content_url_reflections(self, message, guild, reflect_channel, content_urls, handled_urls, parent_reflection):
+    async def send_content_url_reflections(
+        self,
+        message,
+        guild,
+        reflect_channel,
+        content_urls,
+        handled_urls,
+        parent_reflection,
+    ):
         for url in content_urls:
             dprint(
                 f"Processing content URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
@@ -393,7 +435,16 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
             handled_urls.append(url)
 
-    async def send_audio_reflections(self, message, guild, reflect_channel, results, audio_urls, handled_urls, parent_reflection):
+    async def send_audio_reflections(
+        self,
+        message,
+        guild,
+        reflect_channel,
+        results,
+        audio_urls,
+        handled_urls,
+        parent_reflection,
+    ):
         for url in audio_urls:
             dprint(
                 f"Processing audio URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
@@ -441,7 +492,16 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             handled_urls.append(url)
         return parent_reflection
 
-    async def send_video_reflections(self, message, guild, reflect_channel, results, video_urls, handled_urls, parent_reflection):
+    async def send_video_reflections(
+        self,
+        message,
+        guild,
+        reflect_channel,
+        results,
+        video_urls,
+        handled_urls,
+        parent_reflection,
+    ):
         for url in video_urls:
             dprint(
                 f"Processing video URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
@@ -489,7 +549,17 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             handled_urls.append(url)
         return parent_reflection
 
-    async def send_compact_image_reflections(self, message, guild, reflect_channel, results, image_urls, handled_urls, compact_image_reflection_parts, parent_reflection):
+    async def send_compact_image_reflections(
+        self,
+        message,
+        guild,
+        reflect_channel,
+        results,
+        image_urls,
+        handled_urls,
+        compact_image_reflection_parts,
+        parent_reflection,
+    ):
         for url in image_urls:
             dprint(
                 f"Processing image URL: [{url}] Guild: [{guild}] Message: [{message.id}]"
@@ -516,7 +586,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                 message=message,
                 compact_image_reflection_parts=compact_image_reflection_parts,
             )
-            
+
         return parent_reflection
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)

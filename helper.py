@@ -206,7 +206,7 @@ async def get_media_hashes_from_message(message: discord.Message):
         url_to_hash = URLToHashCache()
     if not isinstance(url_to_hash, URLToHashCache):
         url_to_hash = URLToHashCache()
-    
+
     for url in image_urls:
         if not (hash := url_to_hash.get(url)):
             threads.append(threading.Thread(target=generate_hash, kwargs={"url": url}))
