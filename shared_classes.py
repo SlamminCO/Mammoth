@@ -1,5 +1,5 @@
 from discord.ui import Button
-from storage import safe_edit
+from storage import safe_edit, safe_read
 import helper
 import discord
 
@@ -110,8 +110,15 @@ class HashBlacklistButton(Button):
         await interaction.response.edit_message(view=self.view)
 
     def update_mode(self):
+        hash_blacklist = safe_read("global", self.message.guild, "hash_blacklist")
+
+        if not (hash_blacklist := hash_blacklist.get()):
+            hash_blacklist = HashBlacklistObject()
+        if not isinstance(hash_blacklist, HashBlacklistObject):
+            hash_blacklist = HashBlacklistObject()
+
         self.label = (
             "Unblacklist"
-            if helper.is_blacklisted(self.message.guild, self.hash)
+            if hash_blacklist.blacklisted(self.hash)
             else "Blacklist"
         )

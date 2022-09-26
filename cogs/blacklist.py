@@ -3,7 +3,7 @@ from helper import DPrinter
 from discord.ext import commands
 from main import Mammoth
 from shared_classes import HashBlacklistObject
-from storage import safe_edit
+from storage import safe_edit, safe_read
 import discord
 import helper
 import json
@@ -37,8 +37,15 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         results, _ = await helper.get_media_hashes_from_message(message)
 
+        hash_blacklist = safe_read("global", guild, "hash_blacklist")
+
+        if not (hash_blacklist := hash_blacklist.get()):
+            hash_blacklist = HashBlacklistObject()
+        if not isinstance(hash_blacklist, HashBlacklistObject):
+            hash_blacklist = HashBlacklistObject()
+
         for result in results:
-            if helper.is_blacklisted(guild, results[result]):
+            if hash_blacklist.blacklisted(results[result]):
                 try:
                     await message.delete()
 
