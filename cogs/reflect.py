@@ -599,7 +599,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     ):
         guild = interaction.guild
 
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=True)
 
         async with safe_edit(COG, guild, "settings") as settings_storage_object:
             if not (settings := settings_storage_object.get()):
@@ -607,14 +607,16 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             if not isinstance(settings, ReflectCogSettingsObject):
                 settings = ReflectCogSettingsObject()
             if settings.get("enabled"):
-                await interaction.followup.send("Reflect is already enabled!")
+                await interaction.followup.send(
+                    "Reflect is already enabled!", ephemeral=True
+                )
                 return
 
             settings.set("enabled", True)
             settings.set("reflect_channel_id", reflect_channel.id)
             settings_storage_object.set(settings)
 
-        await interaction.followup.send("Reflect enabled!")
+        await interaction.followup.send("Reflect enabled!", ephemeral=True)
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(
@@ -623,23 +625,29 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     async def reflect_disable(self, interaction: discord.Interaction):
         guild = interaction.guild
 
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=True)
 
         async with safe_edit(COG, guild, "settings") as settings_storage_object:
             if not (settings := settings_storage_object.get()):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not settings.get("enabled"):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
 
             settings.set("enabled", False)
             settings_storage_object.set(settings)
 
-        await interaction.followup.send("Reflect disabled!")
+        await interaction.followup.send("Reflect disabled!", ephemeral=True)
 
     reflect_ignore_group = discord.app_commands.Group(
         name="ignore", description="Exclude channels and roles from reflection."
@@ -688,17 +696,23 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     async def reflect_ignore_list(self, interaction: discord.Interaction):
         guild = interaction.guild
 
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=True)
 
         async with safe_edit(COG, guild, "settings") as settings_storage_object:
             if not (settings := settings_storage_object.get()):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not settings.get("enabled"):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
 
             ignored_channels = ", ".join(
@@ -726,23 +740,31 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     ):
         guild = interaction.guild
 
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=True)
 
         async with safe_edit(COG, guild, "settings") as settings_storage_object:
             if not (settings := settings_storage_object.get()):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not settings.get("enabled"):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if channel.id in (
-                ignored_channel_ids := settings.get("ignored_channel_ids")
+                ignored_channel_ids := settings.get(
+                    "ignored_channel_ids", ephemeral=True
+                )
             ):
                 await interaction.followup.send(
-                    f"{channel.mention} is already ignored!"
+                    f"{channel.mention} is already ignored!", ephemeral=True
                 )
                 return
 
@@ -750,7 +772,9 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             settings.set("ignored_channel_ids", ignored_channel_ids)
             settings_storage_object.set(settings)
 
-        await interaction.followup.send(f"Now ignoring {channel.mention}!")
+        await interaction.followup.send(
+            f"Now ignoring {channel.mention}!", ephemeral=True
+        )
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
     @reflect_ignore_group.command(
@@ -762,27 +786,35 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     ):
         guild = interaction.guild
 
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=True)
 
         async with safe_edit(COG, guild, "settings") as settings_storage_object:
             if not (settings := settings_storage_object.get()):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not settings.get("enabled"):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if role.id in (ignored_role_ids := settings.get("ignored_role_ids")):
-                await interaction.followup.send(f"{role.mention} is already ignored!")
+                await interaction.followup.send(
+                    f"{role.mention} is already ignored!", ephemeral=True
+                )
                 return
 
             ignored_role_ids.append(role.id)
             settings.set("ignored_role_ids", ignored_role_ids)
             settings_storage_object.set(settings)
 
-        await interaction.followup.send(f"Now ignoring {role.mention}!")
+        await interaction.followup.send(f"Now ignoring {role.mention}!", ephemeral=True)
 
     reflect_unignore_group = discord.app_commands.Group(
         name="unignore",
@@ -799,29 +831,39 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     ):
         guild = interaction.guild
 
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=True)
 
         async with safe_edit(COG, guild, "settings") as settings_storage_object:
             if not (settings := settings_storage_object.get()):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not settings.get("enabled"):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not channel.id in (
                 ignored_channel_ids := settings.get("ignored_channel_ids")
             ):
-                await interaction.followup.send(f"{channel.mention} is not ignored!")
+                await interaction.followup.send(
+                    f"{channel.mention} is not ignored!", ephemeral=True
+                )
                 return
 
             ignored_channel_ids.remove(channel.id)
             settings.set("ignored_channel_ids", ignored_channel_ids)
             settings_storage_object.set(settings)
 
-        await interaction.followup.send(f"No longer ignoring {channel.mention}!")
+        await interaction.followup.send(
+            f"No longer ignoring {channel.mention}!", ephemeral=True
+        )
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
     @reflect_unignore_group.command(
@@ -833,27 +875,37 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     ):
         guild = interaction.guild
 
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=True)
 
         async with safe_edit(COG, guild, "settings") as settings_storage_object:
             if not (settings := settings_storage_object.get()):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not settings.get("enabled"):
-                await interaction.followup.send("Reflect is not enabled!")
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
                 return
             if not role.id in (ignored_role_ids := settings.get("ignored_role_ids")):
-                await interaction.followup.send(f"{role.mention} is not ignored!")
+                await interaction.followup.send(
+                    f"{role.mention} is not ignored!", ephemeral=True
+                )
                 return
 
             ignored_role_ids.remove(role.id)
             settings.set("ignored_role_ids", ignored_role_ids)
             settings_storage_object.set(settings)
 
-        await interaction.followup.send(f"No longer ignoring {role.mention}!")
+        await interaction.followup.send(
+            f"No longer ignoring {role.mention}!", ephemeral=True
+        )
 
 
 async def setup(bot: Mammoth):
