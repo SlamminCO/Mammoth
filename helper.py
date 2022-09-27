@@ -181,22 +181,26 @@ async def get_media_hashes_from_message(message: discord.Message):
     results = {}
 
     async def hash_external_link(link: str):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(link) as response:
-                data = await response.read()
+        while True:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(link) as response:
+                        data = await response.read()
 
-                try:
-                    image = Image.open(io.BytesIO(data))
-                    hash = imagehash.average_hash(image)
-                    return f"{hash}"
-                except:
-                    pass
+                        try:
+                            image = Image.open(io.BytesIO(data))
+                            hash = imagehash.average_hash(image)
+                            return f"{hash}"
+                        except:
+                            pass
 
-                try:
-                    hash = hashlib.md5(data).hexdigest()
-                    return f"{hash}"
-                except:
-                    pass
+                        try:
+                            hash = hashlib.md5(data).hexdigest()
+                            return f"{hash}"
+                        except:
+                            pass
+            except asyncio.TimeoutError:
+                pass
 
     def generate_hash(*, url):
         loop = asyncio.new_event_loop()
