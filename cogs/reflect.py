@@ -1,3 +1,4 @@
+from time import time
 from helper import DPrinter
 from discord.ext import commands
 from main import Mammoth
@@ -333,7 +334,11 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         if not (reflect_channel := guild.get_channel(reflect_channel_id)):
             return
 
+        time_start = time()
         results, urls = await helper.get_media_hashes_from_message(message)
+        time_total = time() - time_start
+        dprint(f"Hashing took {time_total} second{'' if time_total == 1 else 's'} for Guild: [{guild}] Message: [{message.id}]")
+        
         image_urls, video_urls, audio_urls, standard_urls, content_urls = urls
         handled_urls = []
         parent_reflection = None

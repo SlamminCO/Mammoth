@@ -27,6 +27,9 @@ SUPPORTED_IMAGE_EXTENSIONS = [
 SUPPORTED_VIDEO_EXTENSIONS = [".webm", ".mp4", ".mov"]
 SUPPORTED_AUDIO_EXTENSIONS = [".wav", ".mp3", ".ogg", ".flac"]
 
+with open("./settings.json", "r") as r:
+    SETTINGS = json.load(r)
+
 
 def get_links(string: str):
     try:
@@ -209,7 +212,12 @@ async def get_media_hashes_from_message(message: discord.Message):
 
     for url in image_urls:
         if not (hash := url_to_hash.get(url)):
-            threads.append(threading.Thread(target=generate_hash, kwargs={"url": url}))
+            if SETTINGS["threading"]:
+                thread = threading.Thread(target=generate_hash, kwargs={"url": url})
+                threads.append(thread)
+                thread.start()
+            else:
+                results[url] = await hash_external_link(url)
 
             dprint(
                 f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
@@ -223,7 +231,12 @@ async def get_media_hashes_from_message(message: discord.Message):
         results[url] = hash
     for url in video_urls:
         if not (hash := url_to_hash.get(url)):
-            threads.append(threading.Thread(target=generate_hash, kwargs={"url": url}))
+            if SETTINGS["threading"]:
+                thread = threading.Thread(target=generate_hash, kwargs={"url": url})
+                threads.append(thread)
+                thread.start()
+            else:
+                results[url] = await hash_external_link(url)
 
             dprint(
                 f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
@@ -237,7 +250,12 @@ async def get_media_hashes_from_message(message: discord.Message):
         results[url] = hash
     for url in audio_urls:
         if not (hash := url_to_hash.get(url)):
-            threads.append(threading.Thread(target=generate_hash, kwargs={"url": url}))
+            if SETTINGS["threading"]:
+                thread = threading.Thread(target=generate_hash, kwargs={"url": url})
+                threads.append(thread)
+                thread.start()
+            else:
+                results[url] = await hash_external_link(url)
 
             dprint(
                 f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
@@ -250,25 +268,22 @@ async def get_media_hashes_from_message(message: discord.Message):
 
         results[url] = hash
 
-    for thread in threads:
-        thread.start()
+    if SETTINGS["threading"]:
+        while True:
+            threads_still_alive = False
 
-    # Wait For Threads To Finish
+            for thread in threads:
+                if thread.is_alive():
+                    threads_still_alive = True
+                    break
 
-    while True:
-        threads_still_alive = False
+            if not threads_still_alive:
+                dprint(f"Threads completed! Guild: [{guild}] Message: [{message.id}]")
+                break
 
-        for thread in threads:
-            if thread.is_alive():
-                threads_still_alive = True
+            dprint(f"Waiting for threads. Guild: [{guild}] Message: [{message.id}]")
 
-        if not threads_still_alive:
-            dprint(f"Threads completed! Guild: [{guild}] Message: [{message.id}]")
-            break
-
-        dprint(f"Waiting for threads. Guild: [{guild}] Message: [{message.id}]")
-
-        await asyncio.sleep(1)
+            await asyncio.sleep(1)
 
     # Cache Hashes
 
@@ -292,11 +307,7 @@ async def get_media_hashes_from_message(message: discord.Message):
 class DPrinter:
     def __init__(self, name) -> None:
         self.name = name
-
-        with open("./settings.json", "r") as r:
-            settings = json.load(r)
-
-        self.allow_printing = settings["debugPrinting"]
+        self.allow_printing = SETTINGS["debugPrinting"]
 
     def dprint(self, *objects, sep=" ", end="\n", file=sys.stdout, flush=False):
         if not self.allow_printing:
