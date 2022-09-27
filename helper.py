@@ -168,6 +168,10 @@ def get_media_urls_from_message(message: discord.Message):
 
 async def get_media_hashes_from_message(message: discord.Message):
     dprint = DPrinter(__name__).dprint
+    sdprint_dprinter = DPrinter(__name__)
+    sdprint_dprinter.allow_printing = SETTINGS["spammyDebugPrinting"]
+    sdprint = sdprint_dprinter.dprint
+
     guild = message.guild
     (
         image_urls,
@@ -285,7 +289,7 @@ async def get_media_hashes_from_message(message: discord.Message):
                 dprint(f"Threads completed! Guild: [{guild}] Message: [{message.id}]")
                 break
 
-            dprint(f"Waiting for threads. Guild: [{guild}] Message: [{message.id}]")
+            sdprint(f"Waiting for threads. Guild: [{guild}] Message: [{message.id}]")
 
             await asyncio.sleep(1)
 
