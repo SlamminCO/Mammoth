@@ -12,10 +12,7 @@ parser.add_argument(
     "--auto-restart", dest="auto_restart", action="store_true", required=False
 )
 parser.add_argument(
-    "--threading",
-    dest="threading",
-    action="store_true",
-    required=False
+    "--threading", dest="threading", action="store_true", required=False
 )
 parser.add_argument(
     "--owner-ids", dest="owner_ids", action="extend", nargs="+", type=int
@@ -43,9 +40,9 @@ VOLUME [ "/$DEPLOYMENT_ID$_data" ]
 
 ADD cogs/ ./cogs
 
-ADD main.py .
+ADD utils/ ./utils
 
-ADD helper.py .
+ADD main.py .
 
 ADD storage.py .
 
@@ -168,9 +165,7 @@ def get_token():
 
 def get_threading():
     while (
-        threading := input(
-            f"Use threads to speed up reflect cog? (y/n): "
-        ).lower()
+        threading := input(f"Use threads to speed up reflect cog? (y/n): ").lower()
     ) not in ["y", "n", "yes", "no"]:
         print("\nInvalid response.\n")
 
@@ -224,7 +219,7 @@ def main(
         threading = get_threading()
 
     settings["threading"] = threading
-    
+
     if owner_ids is None:
         owner_ids = get_owner_ids()
 

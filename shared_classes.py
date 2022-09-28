@@ -1,7 +1,8 @@
 from discord.ui import Button
 from storage import safe_edit, safe_read
-import helper
+from utils.hash import LinkHash
 import discord
+
 
 
 class URLToHashCache:
@@ -19,9 +20,12 @@ class HashBlacklistObject:
     def __init__(self):
         self.hash_blacklist = []
 
-    def blacklisted(self, hash: str):
-        return hash in self.hash_blacklist
+    def link_hash_blacklisted(self, link_hash: LinkHash):
+        return link_hash.md5 in self.hash_blacklist or link_hash.image_hash in self.hash_blacklist
 
+    def string_blacklisted(self, hash: str):
+        return hash in self.hash_blacklist
+    
     def add(self, hash: str):
         self.hash_blacklist.append(hash)
 
@@ -33,11 +37,11 @@ class HashBlacklistObject:
 
 
 class HashBlacklistButton(Button):
-    def __init__(self, message: discord.Message, hash: str):
+    def __init__(self, message: discord.Message, link_hash: LinkHash):
         super().__init__(style=discord.ButtonStyle.gray)
 
         self.message = message
-        self.hash = hash
+        self.link_hash = link_hash
 
         self.update_mode()
 
@@ -63,14 +67,18 @@ class HashBlacklistButton(Button):
                 hash_blacklist = HashBlacklistObject()
             if not isinstance(hash_blacklist, HashBlacklistObject):
                 hash_blacklist = HashBlacklistObject()
-            if hash_blacklist.blacklisted(self.hash):
+            if hash_blacklist.link_hash_blacklisted(self.link_hash):
                 self.update_mode()
 
                 await interaction.response.edit_message(view=self.view)
 
                 return
 
-            hash_blacklist.add(self.hash)
+            if self.link_hash.md5:
+                hash_blacklist.add(self.link_hash.md5)
+            if self.link_hash.image_hash:
+                hash_blacklist.add(self.link_hash.image_hash)
+
             hash_blacklist_storage_object.set(hash_blacklist)
 
         self.update_mode()
@@ -95,14 +103,18 @@ class HashBlacklistButton(Button):
                 await interaction.response.edit_message(view=self.view)
 
                 return
-            if not hash_blacklist.blacklisted(self.hash):
+            if not hash_blacklist.link_hash_blacklisted(self.link_hash):
                 self.update_mode()
 
                 await interaction.response.edit_message(view=self.view)
 
                 return
 
-            hash_blacklist.remove(self.hash)
+            if self.link_hash.md5:
+                hash_blacklist.remove(self.link_hash.md5)
+            if self.link_hash.image_hash:
+                hash_blacklist.remove(self.link_hash.image_hash)
+                
             hash_blacklist_storage_object.set(hash_blacklist)
 
         self.update_mode()
@@ -118,5 +130,5 @@ class HashBlacklistButton(Button):
             hash_blacklist = HashBlacklistObject()
 
         self.label = (
-            "Unblacklist" if hash_blacklist.blacklisted(self.hash) else "Blacklist"
+            "Unblacklist" if hash_blacklist.link_hash_blacklisted(self.link_hash) else "Blacklist"
         )
