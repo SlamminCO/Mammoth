@@ -4,7 +4,6 @@ from utils.hash import LinkHash
 import discord
 
 
-
 class URLToHashCache:
     def __init__(self):
         self.url_to_hash = {}
@@ -21,11 +20,14 @@ class HashBlacklistObject:
         self.hash_blacklist = []
 
     def link_hash_blacklisted(self, link_hash: LinkHash):
-        return link_hash.md5 in self.hash_blacklist or link_hash.image_hash in self.hash_blacklist
+        return (
+            link_hash.md5 in self.hash_blacklist
+            or link_hash.image_hash in self.hash_blacklist
+        )
 
     def string_blacklisted(self, hash: str):
         return hash in self.hash_blacklist
-    
+
     def add(self, hash: str):
         self.hash_blacklist.append(hash)
 
@@ -114,7 +116,7 @@ class HashBlacklistButton(Button):
                 hash_blacklist.remove(self.link_hash.md5)
             if self.link_hash.image_hash:
                 hash_blacklist.remove(self.link_hash.image_hash)
-                
+
             hash_blacklist_storage_object.set(hash_blacklist)
 
         self.update_mode()
@@ -130,5 +132,7 @@ class HashBlacklistButton(Button):
             hash_blacklist = HashBlacklistObject()
 
         self.label = (
-            "Unblacklist" if hash_blacklist.link_hash_blacklisted(self.link_hash) else "Blacklist"
+            "Unblacklist"
+            if hash_blacklist.link_hash_blacklisted(self.link_hash)
+            else "Blacklist"
         )

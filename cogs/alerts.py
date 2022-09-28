@@ -76,7 +76,9 @@ class CompactImageAlertPart:
         if link_hash.md5:
             self.embed.add_field(name="MD5", value=link_hash.md5, inline=False)
         if link_hash.image_hash:
-            self.embed.add_field(name="Image Hash", value=link_hash.image_hash, inline=False)
+            self.embed.add_field(
+                name="Image Hash", value=link_hash.image_hash, inline=False
+            )
 
         if len(message.content) != 0:
             self.embed.add_field(name="Content", value=message.content, inline=False)
@@ -275,11 +277,16 @@ class SubmitButton(Button):
 
         await interaction.response.defer(ephemeral=True, thinking=True)
 
-        media_sorted_link_hashes = await get_media_sorted_link_hashes_from_message(self.message)
+        media_sorted_link_hashes = await get_media_sorted_link_hashes_from_message(
+            self.message
+        )
 
         try:
             await self.send_compact_image_alert(media_sorted_link_hashes.image_links)
-            await self.send_non_embeddable_media_alerts(media_sorted_link_hashes.video_links + media_sorted_link_hashes.audio_links)
+            await self.send_non_embeddable_media_alerts(
+                media_sorted_link_hashes.video_links
+                + media_sorted_link_hashes.audio_links
+            )
             await self.send_non_media_url_alerts(media_sorted_link_hashes.other_links)
 
             await interaction.followup.send(
@@ -317,8 +324,7 @@ class SubmitButton(Button):
                 )
             else:
                 alert_message, alert_message_view = await self.send_additional_alert(
-                    message=self.message,
-                    link_hash=link_hash
+                    message=self.message, link_hash=link_hash
                 )
                 alert_message_view.appended_messages.append(
                     await alert_message.reply(f"{link_hash.link}")
@@ -348,8 +354,7 @@ class SubmitButton(Button):
                 )
             else:
                 alert_message, alert_message_view = await self.send_additional_alert(
-                    message=self.message,
-                    link_hash=link_hash
+                    message=self.message, link_hash=link_hash
                 )
                 alert_message_view.appended_messages.append(
                     await alert_message.reply(f"{link_hash.link}")
@@ -359,7 +364,7 @@ class SubmitButton(Button):
 
     async def send_compact_image_alert(self, link_hashes: list[LinkHash]):
         compact_image_alert_parts = []
-        
+
         for link_hash in link_hashes:
             if link_hash.link in self.handled_urls:
                 continue
@@ -626,7 +631,12 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         media_sorted_links = get_media_sorted_links_from_message(message)
 
-        if media_sorted_links.image_links or media_sorted_links.video_links or media_sorted_links.audio_links or media_sorted_links.other_links:
+        if (
+            media_sorted_links.image_links
+            or media_sorted_links.video_links
+            or media_sorted_links.audio_links
+            or media_sorted_links.other_links
+        ):
             await message.add_reaction(alert_emoji_str)
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
