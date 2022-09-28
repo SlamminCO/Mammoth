@@ -141,8 +141,6 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
     if SETTINGS["asyncio_gather"]:
         results = await asyncio.gather(*tasks)
 
-        dprint(results)
-
         for result in results:
             temp_url_to_link_hash_cache.set(result.link, result)
 
