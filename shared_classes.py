@@ -4,17 +4,6 @@ from utils.hash import LinkHash
 import discord
 
 
-class URLToHashCache:
-    def __init__(self):
-        self.url_to_hash = {}
-
-    def get(self, url: str):
-        return self.url_to_hash.get(url)
-
-    def set(self, url: str, hash: str):
-        self.url_to_hash[url] = hash
-
-
 class HashBlacklistObject:
     def __init__(self):
         self.hash_blacklist = []
