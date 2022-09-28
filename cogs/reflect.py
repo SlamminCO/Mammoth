@@ -646,9 +646,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                 )
                 return
             if channel.id in (
-                ignored_channel_ids := settings.get(
-                    "ignored_channel_ids", ephemeral=True
-                )
+                ignored_channel_ids := settings.get("ignored_channel_ids")
             ):
                 await interaction.followup.send(
                     f"{channel.mention} is already ignored!", ephemeral=True
