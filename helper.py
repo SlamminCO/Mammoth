@@ -168,6 +168,10 @@ def get_media_urls_from_message(message: discord.Message):
 
 async def get_media_hashes_from_message(message: discord.Message):
     dprint = DPrinter(__name__).dprint
+    sdprint_dprinter = DPrinter(__name__)
+    sdprint_dprinter.allow_printing = SETTINGS["spammyDebugPrinting"]
+    sdprint = sdprint_dprinter.dprint
+
     guild = message.guild
     (
         image_urls,
@@ -176,27 +180,32 @@ async def get_media_hashes_from_message(message: discord.Message):
         standard_urls,
         content_urls,
     ) = get_media_urls_from_message(message)
+    media_urls = image_urls + video_urls + audio_urls
 
     threads = []
     results = {}
 
     async def hash_external_link(link: str):
-        async with aiohttp.ClientSession() as session:
-            async with session.get(link) as response:
-                data = await response.read()
+        while True:
+            try:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(link) as response:
+                        data = await response.read()
 
-                try:
-                    image = Image.open(io.BytesIO(data))
-                    hash = imagehash.average_hash(image)
-                    return f"{hash}"
-                except:
-                    pass
+                        try:
+                            image = Image.open(io.BytesIO(data))
+                            hash = imagehash.average_hash(image)
+                            return f"{hash}"
+                        except:
+                            pass
 
-                try:
-                    hash = hashlib.md5(data).hexdigest()
-                    return f"{hash}"
-                except:
-                    pass
+                        try:
+                            hash = hashlib.md5(data).hexdigest()
+                            return f"{hash}"
+                        except:
+                            pass
+            except asyncio.TimeoutError:
+                pass
 
     def generate_hash(*, url):
         loop = asyncio.new_event_loop()
@@ -210,47 +219,9 @@ async def get_media_hashes_from_message(message: discord.Message):
     if not isinstance(url_to_hash, URLToHashCache):
         url_to_hash = URLToHashCache()
 
-    for url in image_urls:
+    for url in media_urls:
         if not (hash := url_to_hash.get(url)):
-            if SETTINGS["threading"]:
-                thread = threading.Thread(target=generate_hash, kwargs={"url": url})
-                threads.append(thread)
-                thread.start()
-            else:
-                results[url] = await hash_external_link(url)
-
-            dprint(
-                f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
-            )
-            continue
-
-        dprint(
-            f"Cache found! Hash: [{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
-        )
-
-        results[url] = hash
-    for url in video_urls:
-        if not (hash := url_to_hash.get(url)):
-            if SETTINGS["threading"]:
-                thread = threading.Thread(target=generate_hash, kwargs={"url": url})
-                threads.append(thread)
-                thread.start()
-            else:
-                results[url] = await hash_external_link(url)
-
-            dprint(
-                f"No cache found. Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
-            )
-            continue
-
-        dprint(
-            f"Cache found! Hash: [{hash}] Guild: [{guild}] Message: [{message.id}] URL: [{url}]"
-        )
-
-        results[url] = hash
-    for url in audio_urls:
-        if not (hash := url_to_hash.get(url)):
-            if SETTINGS["threading"]:
+            if SETTINGS["threading"] and len(media_urls) > 1:
                 thread = threading.Thread(target=generate_hash, kwargs={"url": url})
                 threads.append(thread)
                 thread.start()
@@ -268,7 +239,7 @@ async def get_media_hashes_from_message(message: discord.Message):
 
         results[url] = hash
 
-    if SETTINGS["threading"]:
+    if threads:
         while True:
             threads_still_alive = False
 
@@ -281,7 +252,7 @@ async def get_media_hashes_from_message(message: discord.Message):
                 dprint(f"Threads completed! Guild: [{guild}] Message: [{message.id}]")
                 break
 
-            dprint(f"Waiting for threads. Guild: [{guild}] Message: [{message.id}]")
+            sdprint(f"Waiting for threads. Guild: [{guild}] Message: [{message.id}]")
 
             await asyncio.sleep(1)
 
