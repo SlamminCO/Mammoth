@@ -34,8 +34,8 @@ class StorageObject:
         self.last_edit = datetime.now()
 
 
-def safe_read(cog: str, guild: discord.Guild, key: str):
-    base_path = f"{DATA_PATH}/{cog}/{guild.id}"
+def safe_read(scope: str, guild: discord.Guild, key: str):
+    base_path = f"{DATA_PATH}/{scope}/{guild.id}"
     file_path = f"{base_path}/{key}.pickle"
 
     sdprint(f"Read-only request for [{file_path}]")
@@ -76,8 +76,8 @@ def safe_read(cog: str, guild: discord.Guild, key: str):
 
 
 @asynccontextmanager
-async def safe_edit(cog: str, guild: discord.Guild, key: str):
-    base_path = f"{DATA_PATH}/{cog}/{guild.id}"
+async def safe_edit(scope: str, guild: discord.Guild, key: str):
+    base_path = f"{DATA_PATH}/{scope}/{guild.id}"
     file_path = f"{base_path}/{key}.pickle"
 
     sdprint(f"Edit request opened for [{file_path}]")

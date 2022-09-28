@@ -282,12 +282,16 @@ class SubmitButton(Button):
         )
 
         try:
-            await self.send_compact_image_alert(media_sorted_link_hashes.image_links)
-            await self.send_non_embeddable_media_alerts(
-                media_sorted_link_hashes.video_links
-                + media_sorted_link_hashes.audio_links
+            await self.send_compact_image_alert(
+                media_sorted_link_hashes.image_link_hashes
             )
-            await self.send_non_media_url_alerts(media_sorted_link_hashes.other_links)
+            await self.send_non_embeddable_media_alerts(
+                media_sorted_link_hashes.video_link_hashes
+                + media_sorted_link_hashes.audio_link_hashes
+            )
+            await self.send_non_media_url_alerts(
+                media_sorted_link_hashes.other_link_hashes
+            )
 
             await interaction.followup.send(
                 "Your report has been submitted, thank you!", ephemeral=True

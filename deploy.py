@@ -12,8 +12,9 @@ parser.add_argument(
     "--auto-restart", dest="auto_restart", action="store_true", required=False
 )
 parser.add_argument(
-    "--threading", dest="threading", action="store_true", required=False
+    "--asyncio-gather", dest="asyncio_gather", action="store_true", required=False
 )
+parser.add_argument("--caching", dest="caching", action="store_true", required=False)
 parser.add_argument(
     "--owner-ids", dest="owner_ids", action="extend", nargs="+", type=int
 )
@@ -71,7 +72,8 @@ docker run $AUTO_RESTART$ -d --name=$DEPLOYMENT_ID$ --mount source=$DEPLOYMENT_I
 
 settings = {
     "ownerIDs": [],
-    "threading": False,
+    "asyncio_gather": False,
+    "caching": False,
     "debugPrinting": True,
     "spammyDebugPrinting": False,
     "dataPath": "",
@@ -163,19 +165,31 @@ def get_token():
     return input("Please provide your bot token: ")
 
 
-def get_threading():
+def get_asyncio_gather():
     while (
-        threading := input(f"Use threads to speed up reflect cog? (y/n): ").lower()
+        asyncio_gather := input(
+            f"Use asyncio gather to speed up hashing functions? (y/n): "
+        ).lower()
     ) not in ["y", "n", "yes", "no"]:
         print("\nInvalid response.\n")
 
-    return True if threading in ["y", "yes"] else False
+    return True if asyncio_gather in ["y", "yes"] else False
+
+
+def get_caching():
+    while (
+        caching := input(f"Use caching to speed up hashing functions? (y/n): ").lower()
+    ) not in ["y", "n", "yes", "no"]:
+        print("\nInvalid response.\n")
+
+    return True if caching in ["y", "yes"] else False
 
 
 def main(
     deployment_id,
     auto_restart,
-    threading,
+    asyncio_gather,
+    caching,
     owner_ids,
     debug_printing,
     spammy_debug_printing,
@@ -186,7 +200,7 @@ def main(
     print(
         deployment_id,
         auto_restart,
-        threading,
+        asyncio_gather,
         owner_ids,
         debug_printing,
         spammy_debug_printing,
@@ -215,10 +229,15 @@ def main(
 
     docker_run = docker_run.replace(" $AUTO_RESTART$ ", auto_restart)
 
-    if threading is None:
-        threading = get_threading()
+    if asyncio_gather is None:
+        asyncio_gather = get_asyncio_gather()
 
-    settings["threading"] = threading
+    settings["asyncio_gather"] = asyncio_gather
+
+    if caching is None:
+        caching = get_caching()
+
+    settings["caching"] = caching
 
     if owner_ids is None:
         owner_ids = get_owner_ids()

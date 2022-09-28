@@ -345,7 +345,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         parent_reflection = await self.send_compact_image_reflections(
             message,
             reflect_channel,
-            media_sorted_link_hashes.image_links,
+            media_sorted_link_hashes.image_link_hashes,
             handled_urls,
             compact_image_reflection_parts,
             parent_reflection,
@@ -353,15 +353,15 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         parent_reflection = await self.send_non_embeddable_media_reflections(
             message=message,
             reflect_channel=reflect_channel,
-            link_hashes=media_sorted_link_hashes.video_links
-            + media_sorted_link_hashes.audio_links,
+            link_hashes=media_sorted_link_hashes.video_link_hashes
+            + media_sorted_link_hashes.audio_link_hashes,
             handled_urls=handled_urls,
             parent_reflection=parent_reflection,
         )
         await self.send_non_media_url_reflections(
             message,
             reflect_channel,
-            media_sorted_link_hashes.other_links,
+            media_sorted_link_hashes.other_link_hashes,
             handled_urls,
             parent_reflection,
         )

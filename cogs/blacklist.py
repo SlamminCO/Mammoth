@@ -39,9 +39,9 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
             message
         )
         all_media_sorted_link_hashes = (
-            media_sorted_link_hashes.image_links
-            + media_sorted_link_hashes.video_links
-            + media_sorted_link_hashes.audio_links
+            media_sorted_link_hashes.image_link_hashes
+            + media_sorted_link_hashes.video_link_hashes
+            + media_sorted_link_hashes.audio_link_hashes
         )
 
         hash_blacklist = safe_read("global", guild, "hash_blacklist")
