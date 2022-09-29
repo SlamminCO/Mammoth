@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 from utils.link import get_media_sorted_links_from_message, MediaSortedLinks
 from PIL import Image
-from storage import safe_edit, safe_read
+from utils.storage import safe_read, safe_edit
 from utils.debug import DebugPrinter
 import imagehash
 import discord

@@ -1,15 +1,14 @@
 from discord.ext import commands
 from main import Mammoth
-from storage import safe_edit, safe_read
+from utils.storage import safe_read, safe_edit
 from discord.ui import Button, View, Select
 from shared_classes import HashBlacklistButton
 from utils.debug import DebugPrinter
+from utils.hash import LinkHash, get_media_sorted_link_hashes_from_message
+from utils.link import get_media_sorted_links_from_message
 import discord
 import json
 import asyncio
-
-from utils.hash import LinkHash, get_media_sorted_link_hashes_from_message
-from utils.link import get_media_sorted_links_from_message
 
 
 COG = __name__
@@ -536,9 +535,9 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         if not (reporter := guild.get_member(payload.user_id)):
             return
 
-        settings = safe_read(COG, guild, "settings")
+        storage_object = safe_read(COG, guild, "settings")
 
-        if not (settings := settings.get()):
+        if not (settings := storage_object.get()):
             return
         if not isinstance(settings, AlertsCogSettingsObject):
             return
@@ -611,9 +610,9 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         if not isinstance(message.author, discord.Member):
             return
 
-        settings = safe_read(COG, guild, "settings")
+        storage_object = safe_read(COG, guild, "settings")
 
-        if not (settings := settings.get()):
+        if not (settings := storage_object.get()):
             return
         if not isinstance(settings, AlertsCogSettingsObject):
             return
@@ -663,8 +662,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 settings = AlertsCogSettingsObject()
             if not isinstance(settings, AlertsCogSettingsObject):
                 settings = AlertsCogSettingsObject()
@@ -679,7 +678,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             settings.set("mod_role_id", mod_role.id)
             settings.set("alert_emoji_str", str(alert_emoji))
             settings.set("alert_threshold", alert_threshold)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send("Alerts enabled!", ephemeral=True)
 
@@ -690,8 +689,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -708,7 +707,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
                 return
 
             settings.set("enabled", False)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send("Alerts disabled!", ephemeral=True)
 
@@ -724,8 +723,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -742,7 +741,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
                 return
 
             settings.set("alerts_channel_id", alerts_channel.id)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Alerts channel changed to {alerts_channel.mention}!", ephemeral=True
@@ -763,8 +762,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -781,7 +780,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
                 return
 
             settings.set("mod_role_id", mod_role.id)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Mod role changed to {mod_role.mention}!", ephemeral=True
@@ -797,8 +796,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -815,7 +814,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
                 return
 
             settings.set("alert_emoji_str", str(alert_emoji))
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Alert emoji changed to {str(alert_emoji)}!", ephemeral=True
@@ -836,8 +835,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -854,7 +853,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
                 return
 
             settings.set("alert_threshold", alert_threshold)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Alert threshold changed to ``{alert_threshold}``!", ephemeral=True
@@ -871,8 +870,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -912,8 +911,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -938,7 +937,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             ignored_channel_ids.append(channel.id)
             settings.set("ignored_channel_ids", ignored_channel_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Now ignoring {channel.mention}!", ephemeral=True
@@ -961,8 +960,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -987,7 +986,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             ignored_channel_ids.remove(channel.id)
             settings.set("ignored_channel_ids", ignored_channel_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"No longer ignoring {channel.mention}!", ephemeral=True
@@ -1007,8 +1006,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -1048,8 +1047,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -1072,7 +1071,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             trusted_member_ids.append(member.id)
             settings.set("trusted_member_ids", trusted_member_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"{member.mention} is now trusted!", ephemeral=True
@@ -1088,8 +1087,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -1112,7 +1111,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             trusted_role_ids.append(role.id)
             settings.set("trusted_role_ids", trusted_role_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"{role.mention} is now trusted!", ephemeral=True
@@ -1135,8 +1134,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -1161,7 +1160,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             trusted_member_ids.remove(member.id)
             settings.set("trusted_member_ids", trusted_member_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"{member.mention} is no longer trusted!", ephemeral=True
@@ -1179,8 +1178,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -1203,7 +1202,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             trusted_role_ids.remove(role.id)
             settings.set("trusted_role_ids", trusted_role_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"{role.mention} is no longer trusted!", ephemeral=True

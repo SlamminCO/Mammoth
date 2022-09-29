@@ -45,8 +45,6 @@ ADD utils/ ./utils
 
 ADD main.py .
 
-ADD storage.py .
-
 ADD shared_classes.py .
 
 ADD requirements.txt .

@@ -1,7 +1,7 @@
 from time import time
 from discord.ext import commands
 from main import Mammoth
-from storage import safe_edit, safe_read
+from utils.storage import safe_read, safe_edit
 from discord.ui import Button, View, Select
 from shared_classes import HashBlacklistButton
 from utils.hash import get_media_sorted_link_hashes_from_message, LinkHash
@@ -311,9 +311,9 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         if not isinstance(message.author, discord.Member):
             return
 
-        settings = safe_read(COG, guild, "settings")
+        storage_object = safe_read(COG, guild, "settings")
 
-        if not (settings := settings.get()):
+        if not (settings := storage_object.get()):
             return
         if not isinstance(settings, ReflectCogSettingsObject):
             return
@@ -488,8 +488,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 settings = ReflectCogSettingsObject()
             if not isinstance(settings, ReflectCogSettingsObject):
                 settings = ReflectCogSettingsObject()
@@ -501,7 +501,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
             settings.set("enabled", True)
             settings.set("reflect_channel_id", reflect_channel.id)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send("Reflect enabled!", ephemeral=True)
 
@@ -514,8 +514,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
@@ -532,7 +532,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                 return
 
             settings.set("enabled", False)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send("Reflect disabled!", ephemeral=True)
 
@@ -552,8 +552,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
@@ -570,7 +570,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                 return
 
             settings.set("reflect_channel_id", reflect_channel.id)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Reflect channel changed to {reflect_channel.mention}!", ephemeral=True
@@ -585,8 +585,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
@@ -629,8 +629,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
@@ -655,7 +655,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
             ignored_channel_ids.append(channel.id)
             settings.set("ignored_channel_ids", ignored_channel_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Now ignoring {channel.mention}!", ephemeral=True
@@ -673,8 +673,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
@@ -697,7 +697,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
             ignored_role_ids.append(role.id)
             settings.set("ignored_role_ids", ignored_role_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(f"Now ignoring {role.mention}!", ephemeral=True)
 
@@ -718,8 +718,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
@@ -744,7 +744,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
             ignored_channel_ids.remove(channel.id)
             settings.set("ignored_channel_ids", ignored_channel_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"No longer ignoring {channel.mention}!", ephemeral=True
@@ -762,8 +762,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
@@ -786,7 +786,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
             ignored_role_ids.remove(role.id)
             settings.set("ignored_role_ids", ignored_role_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"No longer ignoring {role.mention}!", ephemeral=True

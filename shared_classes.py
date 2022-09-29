@@ -1,5 +1,5 @@
 from discord.ui import Button
-from storage import safe_edit, safe_read
+from utils.storage import safe_read, safe_edit
 from utils.hash import LinkHash
 import discord
 
@@ -53,8 +53,8 @@ class HashBlacklistButton(Button):
 
         async with safe_edit(
             "global", guild, "hash_blacklist"
-        ) as hash_blacklist_storage_object:
-            if not (hash_blacklist := hash_blacklist_storage_object.get()):
+        ) as storage_object:
+            if not (hash_blacklist := storage_object.get()):
                 hash_blacklist = HashBlacklistObject()
             if not isinstance(hash_blacklist, HashBlacklistObject):
                 hash_blacklist = HashBlacklistObject()
@@ -70,7 +70,7 @@ class HashBlacklistButton(Button):
             if self.link_hash.image_hash:
                 hash_blacklist.add(self.link_hash.image_hash)
 
-            hash_blacklist_storage_object.set(hash_blacklist)
+            storage_object.set(hash_blacklist)
 
         self.update_mode()
 
@@ -81,8 +81,8 @@ class HashBlacklistButton(Button):
 
         async with safe_edit(
             "global", guild, "hash_blacklist"
-        ) as hash_blacklist_storage_object:
-            if not (hash_blacklist := hash_blacklist_storage_object.get()):
+        ) as storage_object:
+            if not (hash_blacklist := storage_object.get()):
                 self.update_mode()
 
                 await interaction.response.edit_message(view=self.view)
@@ -106,16 +106,16 @@ class HashBlacklistButton(Button):
             if self.link_hash.image_hash:
                 hash_blacklist.remove(self.link_hash.image_hash)
 
-            hash_blacklist_storage_object.set(hash_blacklist)
+            storage_object.set(hash_blacklist)
 
         self.update_mode()
 
         await interaction.response.edit_message(view=self.view)
 
     def update_mode(self):
-        hash_blacklist = safe_read("global", self.message.guild, "hash_blacklist")
+        storage_object = safe_read("global", self.message.guild, "hash_blacklist")
 
-        if not (hash_blacklist := hash_blacklist.get()):
+        if not (hash_blacklist := storage_object.get()):
             hash_blacklist = HashBlacklistObject()
         if not isinstance(hash_blacklist, HashBlacklistObject):
             hash_blacklist = HashBlacklistObject()

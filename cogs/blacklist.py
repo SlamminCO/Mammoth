@@ -1,7 +1,7 @@
 from discord.ext import commands
 from main import Mammoth
 from shared_classes import HashBlacklistObject
-from storage import safe_edit, safe_read
+from utils.storage import safe_read, safe_edit
 from utils.hash import get_media_sorted_link_hashes_from_message
 from utils.debug import DebugPrinter
 import discord
@@ -44,9 +44,9 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
             + media_sorted_link_hashes.audio_link_hashes
         )
 
-        hash_blacklist = safe_read("global", guild, "hash_blacklist")
+        storage_object = safe_read("global", guild, "hash_blacklist")
 
-        if not (hash_blacklist := hash_blacklist.get()):
+        if not (hash_blacklist := storage_object.get()):
             return
         if not isinstance(hash_blacklist, HashBlacklistObject):
             return
@@ -77,8 +77,8 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         async with safe_edit(
             "global", guild, "hash_blacklist"
-        ) as hash_blacklist_storage_object:
-            if not (hash_blacklist := hash_blacklist_storage_object.get()):
+        ) as storage_object:
+            if not (hash_blacklist := storage_object.get()):
                 hash_blacklist = HashBlacklistObject()
             if not isinstance(hash_blacklist, HashBlacklistObject):
                 hash_blacklist = HashBlacklistObject()
@@ -103,8 +103,8 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         async with safe_edit(
             "global", guild, "hash_blacklist"
-        ) as hash_blacklist_storage_object:
-            if not (hash_blacklist := hash_blacklist_storage_object.get()):
+        ) as storage_object:
+            if not (hash_blacklist := storage_object.get()):
                 hash_blacklist = HashBlacklistObject()
             if not isinstance(hash_blacklist, HashBlacklistObject):
                 hash_blacklist = HashBlacklistObject()
@@ -113,7 +113,7 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
                 return
 
             hash_blacklist.add(hash)
-            hash_blacklist_storage_object.set(hash_blacklist)
+            storage_object.set(hash_blacklist)
 
         await interaction.followup.send(f"``{hash}`` blacklisted!")
 
