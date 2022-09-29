@@ -1,13 +1,14 @@
-import asyncio
-from helper import DPrinter
 from discord.ext import commands
 from main import Mammoth
-from storage import safe_edit, safe_read
+from utils.storage import safe_read, safe_edit
 from discord.ui import Button, View, Select
-from shared_classes import HashBlacklistButton
+from lib.ui import HashBlacklistButton
+from utils.debug import DebugPrinter
+from utils.hash import LinkHash, get_media_sorted_link_hashes_from_message
+from utils.link import get_media_sorted_links_from_message
 import discord
-import helper
 import json
+import asyncio
 
 
 COG = __name__
@@ -26,7 +27,8 @@ with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
 
 
-dprint = DPrinter(COG).dprint
+debug_printer = DebugPrinter(COG, SETTINGS["debugPrinting"])
+dprint = debug_printer.dprint
 
 
 class AlertsCogSettingsObject:
@@ -50,13 +52,11 @@ class AlertsCogSettingsObject:
 class CompactImageAlertPart:
     def __init__(
         self,
-        url: str,
-        hash: str,
+        link_hash: LinkHash,
         message: discord.Message,
         flaggers: list[discord.User],
     ):
-        self.url = url
-        self.hash = hash
+        self.link_hash = link_hash
         self.message = message
         self.embed = discord.Embed()
 
@@ -70,13 +70,19 @@ class CompactImageAlertPart:
                 inline=False,
             )
 
-        self.embed.add_field(name="URL", value=self.url, inline=False)
-        self.embed.add_field(name="Hash", value=hash, inline=False)
+        self.embed.add_field(name="URL", value=self.link_hash.link, inline=False)
+
+        if link_hash.md5:
+            self.embed.add_field(name="MD5", value=link_hash.md5, inline=False)
+        if link_hash.image_hash:
+            self.embed.add_field(
+                name="Image Hash", value=link_hash.image_hash, inline=False
+            )
 
         if len(message.content) != 0:
             self.embed.add_field(name="Content", value=message.content, inline=False)
 
-        self.embed.set_image(url=url)
+        self.embed.set_image(url=self.link_hash.link)
 
 
 class AlertDeleteButton(Button):
@@ -145,24 +151,24 @@ class AlertDismissButton(Button):
 
 
 class AlertView(View):
-    def __init__(self, message: discord.Message, hash: str = None):
+    def __init__(self, message: discord.Message, link_hash: LinkHash = None):
         super().__init__(timeout=None)
 
         self.appended_messages = []
         self.message = message
-        self.hash = hash
+        self.link_hash = link_hash
 
         self.dismiss_button = AlertDismissButton(self.message, self.appended_messages)
         self.jump_button = Button(
             label="Jump", style=discord.ButtonStyle.link, url=message.jump_url
         )
         self.delete_button = AlertDeleteButton(self.message, self.jump_button)
-        self.blacklist_button = HashBlacklistButton(self.message, self.hash)
+        self.blacklist_button = HashBlacklistButton(self.message, self.link_hash)
 
         self.add_item(self.dismiss_button)
         self.add_item(self.delete_button)
 
-        if hash:
+        if self.link_hash.md5 or self.link_hash.image_hash:
             self.add_item(self.blacklist_button)
 
         self.add_item(self.jump_button)
@@ -188,10 +194,10 @@ class CompactImageSelect(Select):
             self.append_option(new_select_option)
             self.value_to_part[f"{i}"] = part
             if i == 0:
-                self.blacklist_button.hash = part.hash
+                self.blacklist_button.link_hash = part.link_hash
 
     async def callback(self, interaction: discord.Interaction):
-        self.blacklist_button.hash = self.value_to_part[self.values[0]].hash
+        self.blacklist_button.link_hash = self.value_to_part[self.values[0]].link_hash
 
         self.blacklist_button.update_mode()
 
@@ -222,7 +228,7 @@ class CompactImageAlertView(View):
         self.dismiss_button = AlertDismissButton(self.message, [])
         self.delete_button = AlertDeleteButton(self.message, self.jump_button)
         self.blacklist_button = HashBlacklistButton(
-            self.message, compact_image_alert_parts[0].hash
+            self.message, compact_image_alert_parts[0].link_hash
         )
 
         if len(compact_image_alert_parts) > 1:
@@ -270,14 +276,21 @@ class SubmitButton(Button):
 
         await interaction.response.defer(ephemeral=True, thinking=True)
 
-        results, urls = await helper.get_media_hashes_from_message(self.message)
-        image_urls, video_urls, audio_urls, _, content_urls = urls
+        media_sorted_link_hashes = await get_media_sorted_link_hashes_from_message(
+            self.message
+        )
 
         try:
-            await self.send_compact_image_alert(results, image_urls)
-            await self.send_video_alerts(results, video_urls)
-            await self.send_audio_alerts(results, audio_urls)
-            await self.send_content_url_alerts(content_urls)
+            await self.send_compact_image_alert(
+                media_sorted_link_hashes.image_link_hashes
+            )
+            await self.send_non_embeddable_media_alerts(
+                media_sorted_link_hashes.video_link_hashes
+                + media_sorted_link_hashes.audio_link_hashes
+            )
+            await self.send_non_media_url_alerts(
+                media_sorted_link_hashes.other_link_hashes
+            )
 
             await interaction.followup.send(
                 "Your report has been submitted, thank you!", ephemeral=True
@@ -292,9 +305,9 @@ class SubmitButton(Button):
                 ephemeral=True,
             )
 
-    async def send_content_url_alerts(self, content_urls: list):
-        for url in content_urls:
-            if url in self.handled_urls:
+    async def send_non_media_url_alerts(self, link_hashes: list[LinkHash]):
+        for link_hash in link_hashes:
+            if link_hash.link in self.handled_urls:
                 continue
 
             if not self.parent_alert_message:
@@ -304,33 +317,28 @@ class SubmitButton(Button):
                 ) = await self.send_parent_alert(
                     alerts_channel=self.alerts_channel,
                     message=self.message,
-                    hash=None,
-                    url=url,
+                    link_hash=link_hash,
                     content=f"🚨 {self.mod_role.mention}"
                     if len(self.flaggers) >= self.alert_threshold
                     else "",
                 )
                 alert_message_view.appended_messages.append(
-                    await self.parent_alert_message.reply(f"{url}")
+                    await self.parent_alert_message.reply(f"{link_hash.link}")
                 )
             else:
                 alert_message, alert_message_view = await self.send_additional_alert(
-                    message=self.message,
-                    hash=None,
-                    url=url,
+                    message=self.message, link_hash=link_hash
                 )
                 alert_message_view.appended_messages.append(
-                    await alert_message.reply(f"{url}")
+                    await alert_message.reply(f"{link_hash.link}")
                 )
 
-            self.handled_urls.append(url)
+            self.handled_urls.append(link_hash.link)
 
-    async def send_audio_alerts(self, results: dict, audio_urls: list):
-        for url in audio_urls:
-            if url in self.handled_urls:
+    async def send_non_embeddable_media_alerts(self, link_hashes: list[LinkHash]):
+        for link_hash in link_hashes:
+            if link_hash.link in self.handled_urls:
                 continue
-
-            hash = results[url]
 
             if not self.parent_alert_message:
                 (
@@ -339,76 +347,36 @@ class SubmitButton(Button):
                 ) = await self.send_parent_alert(
                     alerts_channel=self.alerts_channel,
                     message=self.message,
-                    hash=hash,
-                    url=url,
+                    link_hash=link_hash,
                     content=f"🚨 {self.mod_role.mention}"
                     if len(self.flaggers) >= self.alert_threshold
                     else "",
                 )
                 alert_message_view.appended_messages.append(
-                    await self.parent_alert_message.reply(f"{url}")
+                    await self.parent_alert_message.reply(f"{link_hash.link}")
                 )
             else:
                 alert_message, alert_message_view = await self.send_additional_alert(
-                    message=self.message,
-                    hash=hash,
-                    url=url,
+                    message=self.message, link_hash=link_hash
                 )
                 alert_message_view.appended_messages.append(
-                    await alert_message.reply(f"{url}")
+                    await alert_message.reply(f"{link_hash.link}")
                 )
 
-            self.handled_urls.append(url)
+            self.handled_urls.append(link_hash.link)
 
-    async def send_video_alerts(self, results: dict, video_urls: list):
-        for url in video_urls:
-            if url in self.handled_urls:
-                continue
-
-            hash = results[url]
-
-            if not self.parent_alert_message:
-                (
-                    self.parent_alert_message,
-                    alert_message_view,
-                ) = await self.send_parent_alert(
-                    alerts_channel=self.alerts_channel,
-                    message=self.message,
-                    hash=hash,
-                    url=url,
-                    content=f"🚨 {self.mod_role.mention}"
-                    if len(self.flaggers) >= self.alert_threshold
-                    else "",
-                )
-                alert_message_view.appended_messages.append(
-                    await self.parent_alert_message.reply(f"{url}")
-                )
-            else:
-                alert_message, alert_message_view = await self.send_additional_alert(
-                    message=self.message,
-                    hash=hash,
-                    url=url,
-                )
-                alert_message_view.appended_messages.append(
-                    await alert_message.reply(f"{url}")
-                )
-
-            self.handled_urls.append(url)
-
-    async def send_compact_image_alert(self, results: dict, image_urls: list):
+    async def send_compact_image_alert(self, link_hashes: list[LinkHash]):
         compact_image_alert_parts = []
 
-        for url in image_urls:
-            if url in self.handled_urls:
+        for link_hash in link_hashes:
+            if link_hash.link in self.handled_urls:
                 continue
 
-            hash = results[url]
-
             compact_image_alert_parts.append(
-                CompactImageAlertPart(url, hash, self.message, self.flaggers)
+                CompactImageAlertPart(link_hash, self.message, self.flaggers)
             )
 
-            self.handled_urls.append(url)
+            self.handled_urls.append(link_hash.link)
 
         if compact_image_alert_parts:
             self.parent_alert_view = CompactImageAlertView(
@@ -427,9 +395,7 @@ class SubmitButton(Button):
         *,
         alerts_channel: discord.TextChannel,
         message: discord.Message,
-        url: str,
-        hash: str = None,
-        image_url: str = None,
+        link_hash: LinkHash,
         content: str = None,
     ):
         embed = discord.Embed()
@@ -444,14 +410,14 @@ class SubmitButton(Button):
                 inline=False,
             )
 
-        embed.add_field(name="URL", value=url, inline=False)
+        embed.add_field(name="URL", value=link_hash.link, inline=False)
 
-        if hash:
-            embed.add_field(name="Hash", value=hash, inline=False)
+        if link_hash.md5:
+            embed.add_field(name="MD5", value=link_hash.md5, inline=False)
+        if link_hash.image_hash:
+            embed.add_field(name="Image Hash", value=link_hash.image_hash, inline=False)
         if len(message.content) != 0:
             embed.add_field(name="Content", value=message.content, inline=False)
-        if image_url:
-            embed.set_image(url=image_url)
 
         self.parent_alert_view = AlertView(message, hash)
         alert_message = await alerts_channel.send(
@@ -466,9 +432,7 @@ class SubmitButton(Button):
         self,
         *,
         message: discord.Message,
-        url: str,
-        hash: str = None,
-        image_url: str = None,
+        link_hash: LinkHash,
         content: str = None,
     ):
 
@@ -481,14 +445,14 @@ class SubmitButton(Button):
                 inline=False,
             )
 
-        embed.add_field(name="URL", value=url, inline=False)
+        embed.add_field(name="URL", value=link_hash.link, inline=False)
 
-        if hash:
-            embed.add_field(name="Hash", value=hash, inline=False)
-        if image_url:
-            embed.set_image(url=image_url)
+        if link_hash.md5:
+            embed.add_field(name="MD5", value=link_hash.md5, inline=False)
+        if link_hash.image_hash:
+            embed.add_field(name="Image Hash", value=link_hash.image_hash, inline=False)
 
-        additional_alert_view = AlertView(message, hash)
+        additional_alert_view = AlertView(message, link_hash)
         additional_alert = await self.parent_alert_message.reply(
             content=content,
             embed=embed,
@@ -571,9 +535,9 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         if not (reporter := guild.get_member(payload.user_id)):
             return
 
-        settings = safe_read(COG, guild, "settings")
+        storage_object = safe_read(COG, guild, "settings")
 
-        if not (settings := settings.get()):
+        if not (settings := storage_object.get()):
             return
         if not isinstance(settings, AlertsCogSettingsObject):
             return
@@ -646,9 +610,9 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         if not isinstance(message.author, discord.Member):
             return
 
-        settings = safe_read(COG, guild, "settings")
+        storage_object = safe_read(COG, guild, "settings")
 
-        if not (settings := settings.get()):
+        if not (settings := storage_object.get()):
             return
         if not isinstance(settings, AlertsCogSettingsObject):
             return
@@ -668,15 +632,14 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         if message.channel.id in settings.get("ignored_channel_ids"):
             return
 
-        (
-            image_urls,
-            video_urls,
-            audio_urls,
-            standard_urls,
-            content_urls,
-        ) = helper.get_media_urls_from_message(message)
+        media_sorted_links = get_media_sorted_links_from_message(message)
 
-        if image_urls or video_urls or audio_urls or standard_urls or content_urls:
+        if (
+            media_sorted_links.image_links
+            or media_sorted_links.video_links
+            or media_sorted_links.audio_links
+            or media_sorted_links.other_links
+        ):
             await message.add_reaction(alert_emoji_str)
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
@@ -699,8 +662,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 settings = AlertsCogSettingsObject()
             if not isinstance(settings, AlertsCogSettingsObject):
                 settings = AlertsCogSettingsObject()
@@ -715,7 +678,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             settings.set("mod_role_id", mod_role.id)
             settings.set("alert_emoji_str", str(alert_emoji))
             settings.set("alert_threshold", alert_threshold)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send("Alerts enabled!", ephemeral=True)
 
@@ -726,8 +689,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -744,7 +707,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
                 return
 
             settings.set("enabled", False)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send("Alerts disabled!", ephemeral=True)
 
@@ -760,8 +723,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -778,7 +741,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
                 return
 
             settings.set("alerts_channel_id", alerts_channel.id)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Alerts channel changed to {alerts_channel.mention}!", ephemeral=True
@@ -799,8 +762,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -817,7 +780,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
                 return
 
             settings.set("mod_role_id", mod_role.id)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Mod role changed to {mod_role.mention}!", ephemeral=True
@@ -833,8 +796,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -851,7 +814,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
                 return
 
             settings.set("alert_emoji_str", str(alert_emoji))
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Alert emoji changed to {str(alert_emoji)}!", ephemeral=True
@@ -872,8 +835,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -890,7 +853,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
                 return
 
             settings.set("alert_threshold", alert_threshold)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Alert threshold changed to ``{alert_threshold}``!", ephemeral=True
@@ -904,37 +867,26 @@ class AlertsCog(commands.GroupCog, name="alerts"):
     @alerts_ignore_group.command(name="list", description="List ignored channels.")
     async def alerts_ignore_list(self, interaction: discord.Interaction):
         guild = interaction.guild
+        storage_object = safe_read(COG, guild, "settings")
 
-        await interaction.response.defer(thinking=True, ephemeral=True)
+        if not (settings := storage_object.get()):
+            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            return
+        if not isinstance(settings, AlertsCogSettingsObject):
+            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            return
+        if not settings.get("enabled"):
+            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            return
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
+        ignored_channels = ", ".join(
+            [f"<#{channel_id}>" for channel_id in settings.get("ignored_channel_ids")]
+        )
 
-            ignored_channels = ", ".join(
-                [
-                    f"<#{channel_id}>"
-                    for channel_id in settings.get("ignored_channel_ids")
-                ]
-            )
-
-            await interaction.followup.send(
-                f"Ignored Channels: {ignored_channels}",
-                ephemeral=True,
-            )
+        await interaction.response.send_message(
+            f"Ignored Channels: {ignored_channels}",
+            ephemeral=True,
+        )
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_ignore_group.command(
@@ -948,8 +900,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -974,7 +926,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             ignored_channel_ids.append(channel.id)
             settings.set("ignored_channel_ids", ignored_channel_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"Now ignoring {channel.mention}!", ephemeral=True
@@ -997,8 +949,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -1023,7 +975,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             ignored_channel_ids.remove(channel.id)
             settings.set("ignored_channel_ids", ignored_channel_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"No longer ignoring {channel.mention}!", ephemeral=True
@@ -1040,37 +992,29 @@ class AlertsCog(commands.GroupCog, name="alerts"):
     )
     async def alerts_trust_list(self, interaction: discord.Interaction):
         guild = interaction.guild
+        storage_object = safe_read(COG, guild, "settings")
 
-        await interaction.response.defer(thinking=True, ephemeral=True)
+        if not (settings := storage_object.get()):
+            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            return
+        if not isinstance(settings, AlertsCogSettingsObject):
+            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            return
+        if not settings.get("enabled"):
+            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            return
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
+        trusted_members = ", ".join(
+            [f"<@{member_id}>" for member_id in settings.get("trusted_member_ids")]
+        )
+        trusted_roles = ", ".join(
+            [f"<@&{role_id}>" for role_id in settings.get("trusted_role_ids")]
+        )
 
-            trusted_members = ", ".join(
-                [f"<@{member_id}>" for member_id in settings.get("trusted_member_ids")]
-            )
-            trusted_roles = ", ".join(
-                [f"<@&{role_id}>" for role_id in settings.get("trusted_role_ids")]
-            )
-
-            await interaction.followup.send(
-                f"Trusted Members: {trusted_members}\nTrusted Roles: {trusted_roles}",
-                ephemeral=True,
-            )
+        await interaction.response.send_message(
+            f"Trusted Members: {trusted_members}\nTrusted Roles: {trusted_roles}",
+            ephemeral=True,
+        )
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_trust_group.command(
@@ -1084,8 +1028,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -1108,7 +1052,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             trusted_member_ids.append(member.id)
             settings.set("trusted_member_ids", trusted_member_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"{member.mention} is now trusted!", ephemeral=True
@@ -1124,8 +1068,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -1148,7 +1092,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             trusted_role_ids.append(role.id)
             settings.set("trusted_role_ids", trusted_role_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"{role.mention} is now trusted!", ephemeral=True
@@ -1171,8 +1115,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -1197,7 +1141,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             trusted_member_ids.remove(member.id)
             settings.set("trusted_member_ids", trusted_member_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"{member.mention} is no longer trusted!", ephemeral=True
@@ -1215,8 +1159,8 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as settings_storage_object:
-            if not (settings := settings_storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
@@ -1239,7 +1183,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
             trusted_role_ids.remove(role.id)
             settings.set("trusted_role_ids", trusted_role_ids)
-            settings_storage_object.set(settings)
+            storage_object.set(settings)
 
         await interaction.followup.send(
             f"{role.mention} is no longer trusted!", ephemeral=True

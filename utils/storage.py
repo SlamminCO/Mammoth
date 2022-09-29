@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+from utils.debug import DebugPrinter
 import asyncio
 import os
 import discord
@@ -12,6 +13,10 @@ with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
 
 DATA_PATH = SETTINGS["dataPath"]
+
+
+spam_debug_printer = DebugPrinter(__name__, SETTINGS["spammyDebugPrinting"])
+sdprint = spam_debug_printer.dprint
 
 
 class StorageObject:
@@ -29,14 +34,8 @@ class StorageObject:
         self.last_edit = datetime.now()
 
 
-def safe_read(cog: str, guild: discord.Guild, key: str):
-    from helper import DPrinter
-
-    spammy_dprint_instance = DPrinter(__name__)
-    spammy_dprint_instance.allow_printing = SETTINGS["spammyDebugPrinting"]
-    sdprint = spammy_dprint_instance.dprint
-
-    base_path = f"{DATA_PATH}/{cog}/{guild.id}"
+def safe_read(scope: str, guild: discord.Guild, key: str):
+    base_path = f"{DATA_PATH}/{scope}/{guild.id}"
     file_path = f"{base_path}/{key}.pickle"
 
     sdprint(f"Read-only request for [{file_path}]")
@@ -77,14 +76,8 @@ def safe_read(cog: str, guild: discord.Guild, key: str):
 
 
 @asynccontextmanager
-async def safe_edit(cog: str, guild: discord.Guild, key: str):
-    from helper import DPrinter
-
-    spammy_dprint_instance = DPrinter(__name__)
-    spammy_dprint_instance.allow_printing = SETTINGS["spammyDebugPrinting"]
-    sdprint = spammy_dprint_instance.dprint
-
-    base_path = f"{DATA_PATH}/{cog}/{guild.id}"
+async def safe_edit(scope: str, guild: discord.Guild, key: str):
+    base_path = f"{DATA_PATH}/{scope}/{guild.id}"
     file_path = f"{base_path}/{key}.pickle"
 
     sdprint(f"Edit request opened for [{file_path}]")

@@ -1,11 +1,16 @@
 from discord.ext.commands import Bot
 from discord import Intents
-from helper import DPrinter
+from utils.debug import DebugPrinter
 import json
 import os
 
 
-dprint = DPrinter(__name__).dprint
+with open("./settings.json", "r") as r:
+    SETTINGS = json.load(r)
+
+
+debug_printer = DebugPrinter(__name__, SETTINGS["debugPrinting"])
+dprint = debug_printer.dprint
 
 
 class Mammoth(Bot):

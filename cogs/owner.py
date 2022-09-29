@@ -1,7 +1,7 @@
 from discord.ext import commands
 from discord import app_commands
 from main import Mammoth
-from helper import DPrinter
+from utils.debug import DebugPrinter
 import discord
 import json
 import os
@@ -13,7 +13,8 @@ with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
 
 
-dprint = DPrinter(COG).dprint
+debug_printer = DebugPrinter(COG, SETTINGS["debugPrinting"])
+dprint = debug_printer.dprint
 
 
 def is_owner(interaction: discord.Interaction):
