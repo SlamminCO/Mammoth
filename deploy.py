@@ -43,9 +43,9 @@ ADD cogs/ ./cogs
 
 ADD utils/ ./utils
 
-ADD main.py .
+ADD lib/ ./lib
 
-ADD shared_classes.py .
+ADD main.py .
 
 ADD requirements.txt .
 

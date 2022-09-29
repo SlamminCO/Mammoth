@@ -1,6 +1,6 @@
 from discord.ext import commands
 from main import Mammoth
-from shared_classes import HashBlacklistObject
+from lib.ui import HashBlacklistObject
 from utils.storage import safe_read, safe_edit
 from utils.hash import get_media_sorted_link_hashes_from_message
 from utils.debug import DebugPrinter

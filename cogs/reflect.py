@@ -3,7 +3,7 @@ from discord.ext import commands
 from main import Mammoth
 from utils.storage import safe_read, safe_edit
 from discord.ui import Button, View, Select
-from shared_classes import HashBlacklistButton
+from lib.ui import HashBlacklistButton
 from utils.hash import get_media_sorted_link_hashes_from_message, LinkHash
 from utils.debug import DebugPrinter
 import discord
