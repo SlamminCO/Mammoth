@@ -583,28 +583,19 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     async def reflect_ignore_list(self, interaction: discord.Interaction):
         guild = interaction.guild
         storage_object = safe_read(COG, guild, "settings")
-        
+
         if not (settings := storage_object.get()):
-            await interaction.followup.send(
-                "Reflect is not enabled!", ephemeral=True
-            )
+            await interaction.followup.send("Reflect is not enabled!", ephemeral=True)
             return
         if not isinstance(settings, ReflectCogSettingsObject):
-            await interaction.followup.send(
-                "Reflect is not enabled!", ephemeral=True
-            )
+            await interaction.followup.send("Reflect is not enabled!", ephemeral=True)
             return
         if not settings.get("enabled"):
-            await interaction.followup.send(
-                "Reflect is not enabled!", ephemeral=True
-            )
+            await interaction.followup.send("Reflect is not enabled!", ephemeral=True)
             return
 
         ignored_channels = ", ".join(
-            [
-                f"<#{channel_id}>"
-                for channel_id in settings.get("ignored_channel_ids")
-            ]
+            [f"<#{channel_id}>" for channel_id in settings.get("ignored_channel_ids")]
         )
         ignored_roles = ", ".join(
             [f"<@&{role_id}>" for role_id in settings.get("ignored_role_ids")]

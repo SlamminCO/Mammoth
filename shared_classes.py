@@ -51,9 +51,7 @@ class HashBlacklistButton(Button):
     async def blacklist_mode(self, interaction: discord.Interaction):
         guild = interaction.guild
 
-        async with safe_edit(
-            "global", guild, "hash_blacklist"
-        ) as storage_object:
+        async with safe_edit("global", guild, "hash_blacklist") as storage_object:
             if not (hash_blacklist := storage_object.get()):
                 hash_blacklist = HashBlacklistObject()
             if not isinstance(hash_blacklist, HashBlacklistObject):
@@ -79,9 +77,7 @@ class HashBlacklistButton(Button):
     async def unblacklist_mode(self, interaction: discord.Interaction):
         guild = interaction.guild
 
-        async with safe_edit(
-            "global", guild, "hash_blacklist"
-        ) as storage_object:
+        async with safe_edit("global", guild, "hash_blacklist") as storage_object:
             if not (hash_blacklist := storage_object.get()):
                 self.update_mode()
 
