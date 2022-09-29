@@ -870,13 +870,19 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         storage_object = safe_read(COG, guild, "settings")
 
         if not (settings := storage_object.get()):
-            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            await interaction.response.send_message(
+                "Alerts are not enabled!", ephemeral=True
+            )
             return
         if not isinstance(settings, AlertsCogSettingsObject):
-            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            await interaction.response.send_message(
+                "Alerts are not enabled!", ephemeral=True
+            )
             return
         if not settings.get("enabled"):
-            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            await interaction.response.send_message(
+                "Alerts are not enabled!", ephemeral=True
+            )
             return
 
         ignored_channels = ", ".join(
@@ -995,13 +1001,19 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         storage_object = safe_read(COG, guild, "settings")
 
         if not (settings := storage_object.get()):
-            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            await interaction.response.send_message(
+                "Alerts are not enabled!", ephemeral=True
+            )
             return
         if not isinstance(settings, AlertsCogSettingsObject):
-            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            await interaction.response.send_message(
+                "Alerts are not enabled!", ephemeral=True
+            )
             return
         if not settings.get("enabled"):
-            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
+            await interaction.response.send_message(
+                "Alerts are not enabled!", ephemeral=True
+            )
             return
 
         trusted_members = ", ".join(

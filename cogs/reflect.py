@@ -585,13 +585,13 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         storage_object = safe_read(COG, guild, "settings")
 
         if not (settings := storage_object.get()):
-            await interaction.followup.send("Reflect is not enabled!", ephemeral=True)
+            await interaction.response.send_message("Reflect is not enabled!", ephemeral=True)
             return
         if not isinstance(settings, ReflectCogSettingsObject):
-            await interaction.followup.send("Reflect is not enabled!", ephemeral=True)
+            await interaction.response.send_message("Reflect is not enabled!", ephemeral=True)
             return
         if not settings.get("enabled"):
-            await interaction.followup.send("Reflect is not enabled!", ephemeral=True)
+            await interaction.response.send_message("Reflect is not enabled!", ephemeral=True)
             return
 
         ignored_channels = ", ".join(
