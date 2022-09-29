@@ -224,6 +224,7 @@ class CompactImageReflectionView(View):
 
 
 @discord.app_commands.guild_only()
+@discord.app_commands.checks.has_permissions(manage_messages=True)
 class ReflectCog(commands.GroupCog, name="reflect"):
     def __init__(self, bot: Mammoth):
         self.bot = bot
@@ -476,7 +477,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         return parent_reflection
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="enable", description="Enables media reflecting."
     )
@@ -505,7 +505,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.followup.send("Reflect enabled!", ephemeral=True)
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="disable", description="Disable media reflecting."
     )
@@ -540,7 +539,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         name="ignore", description="Exclude channels and roles from reflection."
     )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="channel", description="Change where to send media reflections."
     )
@@ -576,7 +574,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             f"Reflect channel changed to {reflect_channel.mention}!", ephemeral=True
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @reflect_ignore_group.command(
         name="list", description="List ignored channels and roles."
     )
@@ -585,13 +582,19 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         storage_object = safe_read(COG, guild, "settings")
 
         if not (settings := storage_object.get()):
-            await interaction.response.send_message("Reflect is not enabled!", ephemeral=True)
+            await interaction.response.send_message(
+                "Reflect is not enabled!", ephemeral=True
+            )
             return
         if not isinstance(settings, ReflectCogSettingsObject):
-            await interaction.response.send_message("Reflect is not enabled!", ephemeral=True)
+            await interaction.response.send_message(
+                "Reflect is not enabled!", ephemeral=True
+            )
             return
         if not settings.get("enabled"):
-            await interaction.response.send_message("Reflect is not enabled!", ephemeral=True)
+            await interaction.response.send_message(
+                "Reflect is not enabled!", ephemeral=True
+            )
             return
 
         ignored_channels = ", ".join(
@@ -606,7 +609,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             ephemeral=True,
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @reflect_ignore_group.command(
         name="channel", description="Exclude a channel from reflection."
     )
@@ -650,7 +652,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             f"Now ignoring {channel.mention}!", ephemeral=True
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @reflect_ignore_group.command(
         name="role", description="Exclude a role from reflection."
     )
@@ -695,7 +696,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         description="Stop excluding channels and roles from reflection.",
     )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @reflect_unignore_group.command(
         name="channel", description="Stop excluding a channel from reflection."
     )
@@ -739,7 +739,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             f"No longer ignoring {channel.mention}!", ephemeral=True
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @reflect_unignore_group.command(
         name="role", description="Stop excluding a role from reflection."
     )

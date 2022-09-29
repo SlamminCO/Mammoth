@@ -510,6 +510,7 @@ class SubmitReportView(View):
 
 
 @discord.app_commands.guild_only()
+@discord.app_commands.checks.has_permissions(manage_messages=True)
 class AlertsCog(commands.GroupCog, name="alerts"):
     def __init__(self, bot: Mammoth):
         self.bot = bot
@@ -642,7 +643,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         ):
             await message.add_reaction(alert_emoji_str)
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(name="enable", description="Enable alerts.")
     @discord.app_commands.describe(
         alerts_channel="Where to send alerts.",
@@ -682,7 +682,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.followup.send("Alerts enabled!", ephemeral=True)
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(name="disable", description="Disable alerts.")
     async def alerts_disable(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -711,7 +710,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.followup.send("Alerts disabled!", ephemeral=True)
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="channel", description="Change where to send alerts."
     )
@@ -747,7 +745,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             f"Alerts channel changed to {alerts_channel.mention}!", ephemeral=True
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="modrole",
         description="Change which role to ping when the threshold is met.",
@@ -786,7 +783,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             f"Mod role changed to {mod_role.mention}!", ephemeral=True
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="emoji", description="Change which emoji to use for reporting."
     )
@@ -820,7 +816,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             f"Alert emoji changed to {str(alert_emoji)}!", ephemeral=True
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="threshold",
         description="Change how many reports are needed before pinging the mod role.",
@@ -863,7 +858,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         name="ignore", description="Exclude channels from alerts."
     )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_ignore_group.command(name="list", description="List ignored channels.")
     async def alerts_ignore_list(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -894,7 +888,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             ephemeral=True,
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_ignore_group.command(
         name="channel", description="Exclude a channel from alerts."
     )
@@ -943,7 +936,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         description="Stop excluding channels from alerts.",
     )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_unignore_group.command(
         name="channel", description="Stop excluding a channel from alerts."
     )
@@ -992,7 +984,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         description="Exclude members and roles from alerts.",
     )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_trust_group.command(
         name="list", description="List trusted members and roles."
     )
@@ -1028,7 +1019,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             ephemeral=True,
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_trust_group.command(
         name="member", description="Exclude a member from alerts."
     )
@@ -1070,7 +1060,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             f"{member.mention} is now trusted!", ephemeral=True
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_trust_group.command(name="role", description="Exclude a role from alerts.")
     @discord.app_commands.describe(role="Role to exclude from alerts.")
     async def alerts_trust_role(
@@ -1115,7 +1104,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         description="Stop excluding members and roles from alerts.",
     )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_untrust_group.command(
         name="member", description="Stop excluding a member from alerts."
     )
@@ -1159,7 +1147,6 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             f"{member.mention} is no longer trusted!", ephemeral=True
         )
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_untrust_group.command(
         name="role", description="Stop excluding a role from alerts."
     )

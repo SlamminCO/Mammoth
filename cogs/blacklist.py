@@ -68,7 +68,6 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
                 except discord.HTTPException:
                     return
 
-    @discord.app_commands.checks.has_permissions(manage_messages=True)
     @discord.app_commands.command(name="list", description="List blacklisted hashes.")
     async def blacklist_list(self, interaction: discord.Interaction):
         guild = interaction.guild
