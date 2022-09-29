@@ -73,22 +73,19 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
     async def blacklist_list(self, interaction: discord.Interaction):
         guild = interaction.guild
 
-        await interaction.response.defer(thinking=True)
+        storage_object = safe_read("global", guild, "hash_blacklist")
+        
+        if not (hash_blacklist := storage_object.get()):
+            hash_blacklist = HashBlacklistObject()
+        if not isinstance(hash_blacklist, HashBlacklistObject):
+            hash_blacklist = HashBlacklistObject()
 
-        async with safe_edit(
-            "global", guild, "hash_blacklist"
-        ) as storage_object:
-            if not (hash_blacklist := storage_object.get()):
-                hash_blacklist = HashBlacklistObject()
-            if not isinstance(hash_blacklist, HashBlacklistObject):
-                hash_blacklist = HashBlacklistObject()
+        hash_blacklist = ", ".join([f"``{hash}``" for hash in hash_blacklist.all()])
 
-            hash_blacklist = ", ".join([f"``{hash}``" for hash in hash_blacklist.all()])
-
-            await interaction.followup.send(
-                f"Hashes Blacklisted: {hash_blacklist}",
-                ephemeral=True,
-            )
+        await interaction.response.send_message(
+            f"Hashes Blacklisted: {hash_blacklist}",
+            ephemeral=True,
+        )
 
     @discord.app_commands.command(
         name="add", description="Add a hash to the blacklist."

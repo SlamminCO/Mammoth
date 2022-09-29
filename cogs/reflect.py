@@ -582,40 +582,38 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     )
     async def reflect_ignore_list(self, interaction: discord.Interaction):
         guild = interaction.guild
-
-        await interaction.response.defer(thinking=True, ephemeral=True)
-
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-
-            ignored_channels = ", ".join(
-                [
-                    f"<#{channel_id}>"
-                    for channel_id in settings.get("ignored_channel_ids")
-                ]
-            )
-            ignored_roles = ", ".join(
-                [f"<@&{role_id}>" for role_id in settings.get("ignored_role_ids")]
-            )
-
+        storage_object = safe_read(COG, guild, "settings")
+        
+        if not (settings := storage_object.get()):
             await interaction.followup.send(
-                f"Ignored Channels: {ignored_channels}\nIgnored Roles: {ignored_roles}",
-                ephemeral=True,
+                "Reflect is not enabled!", ephemeral=True
             )
+            return
+        if not isinstance(settings, ReflectCogSettingsObject):
+            await interaction.followup.send(
+                "Reflect is not enabled!", ephemeral=True
+            )
+            return
+        if not settings.get("enabled"):
+            await interaction.followup.send(
+                "Reflect is not enabled!", ephemeral=True
+            )
+            return
+
+        ignored_channels = ", ".join(
+            [
+                f"<#{channel_id}>"
+                for channel_id in settings.get("ignored_channel_ids")
+            ]
+        )
+        ignored_roles = ", ".join(
+            [f"<@&{role_id}>" for role_id in settings.get("ignored_role_ids")]
+        )
+
+        await interaction.response.send_message(
+            f"Ignored Channels: {ignored_channels}\nIgnored Roles: {ignored_roles}",
+            ephemeral=True,
+        )
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
     @reflect_ignore_group.command(

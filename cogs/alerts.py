@@ -867,37 +867,35 @@ class AlertsCog(commands.GroupCog, name="alerts"):
     @alerts_ignore_group.command(name="list", description="List ignored channels.")
     async def alerts_ignore_list(self, interaction: discord.Interaction):
         guild = interaction.guild
+        storage_object = safe_read(COG, guild, "settings")
 
-        await interaction.response.defer(thinking=True, ephemeral=True)
-
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-
-            ignored_channels = ", ".join(
-                [
-                    f"<#{channel_id}>"
-                    for channel_id in settings.get("ignored_channel_ids")
-                ]
-            )
-
+        if not (settings := storage_object.get()):
             await interaction.followup.send(
-                f"Ignored Channels: {ignored_channels}",
-                ephemeral=True,
+                "Alerts are not enabled!", ephemeral=True
             )
+            return
+        if not isinstance(settings, AlertsCogSettingsObject):
+            await interaction.followup.send(
+                "Alerts are not enabled!", ephemeral=True
+            )
+            return
+        if not settings.get("enabled"):
+            await interaction.followup.send(
+                "Alerts are not enabled!", ephemeral=True
+            )
+            return
+
+        ignored_channels = ", ".join(
+            [
+                f"<#{channel_id}>"
+                for channel_id in settings.get("ignored_channel_ids")
+            ]
+        )
+
+        await interaction.response.send_message(
+            f"Ignored Channels: {ignored_channels}",
+            ephemeral=True,
+        )
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_ignore_group.command(
@@ -1003,37 +1001,35 @@ class AlertsCog(commands.GroupCog, name="alerts"):
     )
     async def alerts_trust_list(self, interaction: discord.Interaction):
         guild = interaction.guild
+        storage_object = safe_read(COG, guild, "settings")
 
-        await interaction.response.defer(thinking=True, ephemeral=True)
-
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-
-            trusted_members = ", ".join(
-                [f"<@{member_id}>" for member_id in settings.get("trusted_member_ids")]
-            )
-            trusted_roles = ", ".join(
-                [f"<@&{role_id}>" for role_id in settings.get("trusted_role_ids")]
-            )
-
+        if not (settings := storage_object.get()):
             await interaction.followup.send(
-                f"Trusted Members: {trusted_members}\nTrusted Roles: {trusted_roles}",
-                ephemeral=True,
+                "Alerts are not enabled!", ephemeral=True
             )
+            return
+        if not isinstance(settings, AlertsCogSettingsObject):
+            await interaction.followup.send(
+                "Alerts are not enabled!", ephemeral=True
+            )
+            return
+        if not settings.get("enabled"):
+            await interaction.followup.send(
+                "Alerts are not enabled!", ephemeral=True
+            )
+            return
+
+        trusted_members = ", ".join(
+            [f"<@{member_id}>" for member_id in settings.get("trusted_member_ids")]
+        )
+        trusted_roles = ", ".join(
+            [f"<@&{role_id}>" for role_id in settings.get("trusted_role_ids")]
+        )
+
+        await interaction.response.send_message(
+            f"Trusted Members: {trusted_members}\nTrusted Roles: {trusted_roles}",
+            ephemeral=True,
+        )
 
     @discord.app_commands.checks.has_permissions(manage_messages=True)
     @alerts_trust_group.command(
