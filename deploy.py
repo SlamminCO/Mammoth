@@ -2,34 +2,76 @@ import json
 import argparse
 import os
 
-
-DEFAULT_DEPLOYMENT_ID = "mammoth_bot"
-
-
 parser = argparse.ArgumentParser()
-parser.add_argument("--deploy-id", dest="deployment_id", type=str, required=False)
 parser.add_argument(
-    "--auto-restart", dest="auto_restart", action="store_true", required=False
+    "--deploy-id",
+    dest="deployment_id",
+    type=str,
+    default="mammoth_bot",
+    required=False,
+    help="Give the instance a custom name. Useful for deploying multiple instances.",
 )
 parser.add_argument(
-    "--asyncio-gather", dest="asyncio_gather", action="store_true", required=False
-)
-parser.add_argument("--caching", dest="caching", action="store_true", required=False)
-parser.add_argument(
-    "--owner-ids", dest="owner_ids", action="extend", nargs="+", type=int
-)
-parser.add_argument(
-    "--print-debug", dest="debug_printing", action="store_true", required=False
+    "--no-auto-restart",
+    dest="auto_restart",
+    action="store_false",
+    required=False,
+    help="Disable auto-restarting when the bot crashes.",
 )
 parser.add_argument(
-    "--print-debug-spam",
+    "--no-asyncio-gather",
+    dest="asyncio_gather",
+    action="store_false",
+    required=False,
+    help="Disable using asyncio gather when generating hashes.",
+)
+parser.add_argument(
+    "--no-caching",
+    dest="caching",
+    action="store_false",
+    required=False,
+    help="Disable caching hashes.",
+)
+parser.add_argument(
+    "--owner-ids",
+    dest="owner_ids",
+    action="extend",
+    nargs="+",
+    type=int,
+    required=True,
+    help="List of discord IDs authorized to run the bot's owner commands.",
+)
+parser.add_argument(
+    "--no-debug-printing",
+    dest="debug_printing",
+    action="store_false",
+    required=False,
+    help="Disable debug printers.",
+)
+parser.add_argument(
+    "--debug-print-spam",
     dest="spammy_debug_printing",
     action="store_true",
     required=False,
+    help="Enable more spammy debug printers.",
 )
-parser.add_argument("--token", dest="bot_token", type=str, required=False)
-parser.add_argument("--build", dest="build", action="store_true", required=False)
-parser.add_argument("--run", dest="run", action="store_true", required=False)
+parser.add_argument(
+    "--token", dest="bot_token", type=str, required=True, help="Discord bot token."
+)
+parser.add_argument(
+    "--build",
+    dest="build",
+    action="store_true",
+    required=False,
+    help="Build the docker image.",
+)
+parser.add_argument(
+    "--run",
+    dest="run",
+    action="store_true",
+    required=False,
+    help="Run the docker image.",
+)
 
 
 dockerfile = """
@@ -70,117 +112,14 @@ docker run $AUTO_RESTART$ -d --name=$DEPLOYMENT_ID$ --mount source=$DEPLOYMENT_I
 
 settings = {
     "ownerIDs": [],
-    "asyncio_gather": False,
-    "caching": False,
+    "asyncio_gather": True,
+    "caching": True,
     "debugPrinting": True,
     "spammyDebugPrinting": False,
     "dataPath": "",
 }
 
 token = {"token": ""}
-
-
-def get_deployment_id():
-    deployment_id = input(f"Deployment ID? (Default: {DEFAULT_DEPLOYMENT_ID}): ")
-
-    while deployment_id.find(" ") != -1:
-        print("\nDeployment ID cannot contain spaces.\n")
-
-        deployment_id = input(f"Deployment ID? (Default: {DEFAULT_DEPLOYMENT_ID}): ")
-
-    deployment_id = deployment_id if deployment_id else DEFAULT_DEPLOYMENT_ID
-
-    return deployment_id
-
-
-def get_auto_restart():
-    while (
-        auto_restart := input(
-            f"Should the container auto-restart on failure? (y/n): "
-        ).lower()
-    ) not in ["y", "n", "yes", "no"]:
-        print("\nInvalid response.\n")
-
-    return " --restart=on-failure " if auto_restart in ["y", "yes"] else " "
-
-
-def get_owner_ids():
-    owner_id_list = []
-
-    while True:
-        owner_id = input(
-            f"Please provide a discord user ID to give access to owner commands: "
-        )
-
-        try:
-            owner_id = int(owner_id)
-        except:
-            print("\nID must be an integer.\n")
-            continue
-
-        owner_id_list.append(owner_id)
-
-        add_more_prompt = input(
-            f"Would you like to add another ID to the owner list? (y/n): "
-        ).lower()
-
-        while add_more_prompt not in ["y", "n", "yes", "no"]:
-            print("\nInvalid response.\n")
-
-            add_more_prompt = input(
-                f"Would you like to add another ID to the owner list? (y/n): "
-            ).lower()
-
-        if add_more_prompt in ["n", "no"]:
-            break
-
-    return owner_id_list
-
-
-def get_debug_printing():
-    while (
-        debug_printing := input(
-            f"Should debug info be printed to the logs? (y/n): "
-        ).lower()
-    ) not in ["y", "n", "yes", "no"]:
-        print("\nInvalid response.\n")
-
-    return True if debug_printing in ["y", "yes"] else False
-
-
-def get_spammy_debug_printing():
-    while (
-        debug_printing := input(
-            f"Should additional (spammy) debug info be printed to the logs? (y/n): "
-        ).lower()
-    ) not in ["y", "n", "yes", "no"]:
-        print("\nInvalid response.\n")
-
-    return True if debug_printing in ["y", "yes"] else False
-
-
-def get_token():
-    return input("Please provide your bot token: ")
-
-
-def get_asyncio_gather():
-    while (
-        asyncio_gather := input(
-            f"Use asyncio gather to speed up hashing functions? (y/n): "
-        ).lower()
-    ) not in ["y", "n", "yes", "no"]:
-        print("\nInvalid response.\n")
-
-    return True if asyncio_gather in ["y", "yes"] else False
-
-
-def get_caching():
-    while (
-        caching := input(f"Use caching to speed up hashing functions? (y/n): ").lower()
-    ) not in ["y", "n", "yes", "no"]:
-        print("\nInvalid response.\n")
-
-    return True if caching in ["y", "yes"] else False
 
 
 def main(
@@ -199,62 +138,36 @@ def main(
         deployment_id,
         auto_restart,
         asyncio_gather,
+        caching,
         owner_ids,
         debug_printing,
         spammy_debug_printing,
         bot_token,
+        build,
+        run,
     )
-
     global dockerfile
     global docker_build
     global docker_run
     global settings
     global token
 
-    if deployment_id is None:
-        deployment_id = get_deployment_id()
-
     dockerfile = dockerfile.replace("$DEPLOYMENT_ID$", deployment_id)
+
     docker_build = docker_build.replace("$DEPLOYMENT_ID$", deployment_id)
+
     docker_run = docker_run.replace("$DEPLOYMENT_ID$", deployment_id)
+    docker_run = docker_run.replace(
+        " $AUTO_RESTART$ ", " --restart=on-failure " if auto_restart else " "
+    )
 
     settings["dataPath"] = f"/{deployment_id}_data"
-
-    if auto_restart is None:
-        auto_restart = get_auto_restart()
-    else:
-        auto_restart = " --restart=on-failure " if auto_restart else " "
-
-    docker_run = docker_run.replace(" $AUTO_RESTART$ ", auto_restart)
-
-    if asyncio_gather is None:
-        asyncio_gather = get_asyncio_gather()
-
     settings["asyncio_gather"] = asyncio_gather
-
-    if caching is None:
-        caching = get_caching()
-
     settings["caching"] = caching
-
-    if owner_ids is None:
-        owner_ids = get_owner_ids()
-
     settings["ownerIDs"] = owner_ids
-
-    if debug_printing is None:
-        debug_printing = get_debug_printing()
-
     settings["debugPrinting"] = debug_printing
-
-    if spammy_debug_printing is None:
-        spammy_debug_printing = get_spammy_debug_printing()
-
     settings["spammyDebugPrinting"] = spammy_debug_printing
-
-    if bot_token is None:
-        bot_token = get_token()
-
+    
     token["token"] = bot_token
 
     with open("./dockerfile", "w") as w:
