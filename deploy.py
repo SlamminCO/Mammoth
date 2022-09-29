@@ -134,18 +134,6 @@ def main(
     build,
     run,
 ):
-    print(
-        deployment_id,
-        auto_restart,
-        asyncio_gather,
-        caching,
-        owner_ids,
-        debug_printing,
-        spammy_debug_printing,
-        bot_token,
-        build,
-        run,
-    )
     global dockerfile
     global docker_build
     global docker_run
@@ -167,7 +155,7 @@ def main(
     settings["ownerIDs"] = owner_ids
     settings["debugPrinting"] = debug_printing
     settings["spammyDebugPrinting"] = spammy_debug_printing
-    
+
     token["token"] = bot_token
 
     with open("./dockerfile", "w") as w:
