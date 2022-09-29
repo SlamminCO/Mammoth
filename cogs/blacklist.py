@@ -96,7 +96,7 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
     ):
         guild = interaction.guild
 
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=True)
 
         async with safe_edit("global", guild, "hash_blacklist") as storage_object:
             if not (hash_blacklist := storage_object.get()):
@@ -104,13 +104,15 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
             if not isinstance(hash_blacklist, HashBlacklistObject):
                 hash_blacklist = HashBlacklistObject()
             if hash_blacklist.string_blacklisted(hash):
-                await interaction.followup.send(f"``{hash}`` is already blacklisted!")
+                await interaction.followup.send(
+                    f"``{hash}`` is already blacklisted!", ephemeral=True
+                )
                 return
 
             hash_blacklist.add(hash)
             storage_object.set(hash_blacklist)
 
-        await interaction.followup.send(f"``{hash}`` blacklisted!")
+        await interaction.followup.send(f"``{hash}`` blacklisted!", ephemeral=True)
 
     @discord.app_commands.command(
         name="remove", description="Remove a hash from the blacklist."
@@ -121,7 +123,7 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
     ):
         guild = interaction.guild
 
-        await interaction.response.defer(thinking=True)
+        await interaction.response.defer(thinking=True, ephemeral=True)
 
         async with safe_edit(
             "global", guild, "hash_blacklist"
@@ -131,13 +133,15 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
             if not isinstance(hash_blacklist, HashBlacklistObject):
                 hash_blacklist = HashBlacklistObject()
             if not hash_blacklist.string_blacklisted(hash):
-                await interaction.followup.send(f"``{hash}`` is not blacklisted!")
+                await interaction.followup.send(
+                    f"``{hash}`` is not blacklisted!", ephemeral=True
+                )
                 return
 
             hash_blacklist.remove(hash)
             hash_blacklist_storage_object.set(hash_blacklist)
 
-        await interaction.followup.send(f"``{hash}`` unblacklisted!")
+        await interaction.followup.send(f"``{hash}`` unblacklisted!", ephemeral=True)
 
 
 async def setup(bot: Mammoth):
