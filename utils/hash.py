@@ -168,6 +168,8 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
                 if not url_to_link_hash_cache.get(url):
                     url_to_link_hash_cache.set(url, link_hash)
 
+            storage_object.set(url_to_link_hash_cache)
+
     return MediaSortedLinkHashes(
         image_link_hashes, video_link_hashes, audio_link_hashes, other_link_hashes
     )
