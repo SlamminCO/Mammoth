@@ -15,6 +15,7 @@ DEFAULT_REFLECT_COG_SETTINGS = {
     "enabled": False,
     "ignored_channel_ids": [],
     "ignored_role_ids": [],
+    "ignored_member_ids": [],
     "reflect_channel_id": None,
 }
 
@@ -324,6 +325,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             return
         if channel.id == (reflect_channel_id := settings.get("reflect_channel_id")):
             return
+        if message.author.id in settings.get("ignored_member_ids"):
+            return
         for role in message.author.roles:
             if role.id in settings.get("ignored_role_ids"):
                 return
@@ -535,10 +538,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.followup.send("Reflect disabled!", ephemeral=True)
 
-    reflect_ignore_group = discord.app_commands.Group(
-        name="ignore", description="Exclude channels and roles from reflection."
-    )
-
     @discord.app_commands.command(
         name="channel", description="Change where to send media reflections."
     )
@@ -574,8 +573,12 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             f"Reflect channel changed to {reflect_channel.mention}!", ephemeral=True
         )
 
+    reflect_ignore_group = discord.app_commands.Group(
+        name="ignore", description="Exclude members, channels and roles from reflection."
+    )
+
     @reflect_ignore_group.command(
-        name="list", description="List ignored channels and roles."
+        name="list", description="List ignored members, channels and roles."
     )
     async def reflect_ignore_list(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -603,12 +606,58 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         ignored_roles = ", ".join(
             [f"<@&{role_id}>" for role_id in settings.get("ignored_role_ids")]
         )
+        ignored_members = ", ".join(
+            [f"<@{member_id}>" for member_id in settings.get("ignored_member_ids")]
+        )
 
         await interaction.response.send_message(
-            f"Ignored Channels: {ignored_channels}\nIgnored Roles: {ignored_roles}",
+            f"Ignored Channels: {ignored_channels}\nIgnored Roles: {ignored_roles}\nIgnored Members: {ignored_members}",
             ephemeral=True,
         )
 
+    @reflect_ignore_group.command(
+        name="member", description="Exclude a member from reflection."
+    )
+    @discord.app_commands.describe(member="Member to exclude from reflection.")
+    async def reflect_ignore_member(
+        self, interaction: discord.Interaction, member: discord.Member
+    ):
+        guild = interaction.guild
+
+        await interaction.response.defer(thinking=True, ephemeral=True)
+
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
+                return
+            if not isinstance(settings, ReflectCogSettingsObject):
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
+                return
+            if not settings.get("enabled"):
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
+                return
+            if member.id in (
+                ignored_member_ids := settings.get("ignored_member_ids")
+            ):
+                await interaction.followup.send(
+                    f"{member.mention} is already ignored!", ephemeral=True
+                )
+                return
+
+            ignored_member_ids.append(member.id)
+            settings.set("ignored_member_ids", ignored_member_ids)
+            storage_object.set(settings)
+
+        await interaction.followup.send(
+            f"Now ignoring {member.mention}!", ephemeral=True
+        )
+    
     @reflect_ignore_group.command(
         name="channel", description="Exclude a channel from reflection."
     )
@@ -693,8 +742,51 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
     reflect_unignore_group = discord.app_commands.Group(
         name="unignore",
-        description="Stop excluding channels and roles from reflection.",
+        description="Stop excluding members, channels and roles from reflection.",
     )
+
+    @reflect_unignore_group.command(
+        name="member", description="Stop excluding a member from reflection."
+    )
+    @discord.app_commands.describe(member="Member to stop excluding from reflection.")
+    async def reflect_unignore_member(
+        self, interaction: discord.Interaction, member: discord.Member
+    ):
+        guild = interaction.guild
+
+        await interaction.response.defer(thinking=True, ephemeral=True)
+
+        async with safe_edit(COG, guild, "settings") as storage_object:
+            if not (settings := storage_object.get()):
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
+                return
+            if not isinstance(settings, ReflectCogSettingsObject):
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
+                return
+            if not settings.get("enabled"):
+                await interaction.followup.send(
+                    "Reflect is not enabled!", ephemeral=True
+                )
+                return
+            if not member.id in (
+                ignored_member_ids := settings.get("ignored_member_ids")
+            ):
+                await interaction.followup.send(
+                    f"{member.mention} is not ignored!", ephemeral=True
+                )
+                return
+
+            ignored_member_ids.remove(member.id)
+            settings.set("ignored_member_ids", ignored_member_ids)
+            storage_object.set(settings)
+
+        await interaction.followup.send(
+            f"No longer ignoring {member.mention}!", ephemeral=True
+        )
 
     @reflect_unignore_group.command(
         name="channel", description="Stop excluding a channel from reflection."
