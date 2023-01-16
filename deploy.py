@@ -59,18 +59,21 @@ parser.add_argument(
     "--token", dest="bot_token", type=str, required=True, help="Discord bot token."
 )
 parser.add_argument(
+    "--docker",
+    dest="docker_mode",
+    action="store_true",
+    required=False,
+    help="Configure the bot to be built and run in Docker.",
+)
+parser.add_argument(
     "--build",
     dest="build",
     action="store_true",
     required=False,
-    help="Build the docker image.",
+    help="Build the docker or host files necessary to run the bot.",
 )
 parser.add_argument(
-    "--run",
-    dest="run",
-    action="store_true",
-    required=False,
-    help="Run the docker image.",
+    "--run", dest="run", action="store_true", required=False, help="Run the bot."
 )
 
 
@@ -110,6 +113,13 @@ docker rm --force $DEPLOYMENT_ID$
 docker run $AUTO_RESTART$ -d --name=$DEPLOYMENT_ID$ --mount source=$DEPLOYMENT_ID$_data,destination=/$DEPLOYMENT_ID$_data $DEPLOYMENT_ID$
 """
 
+host_build = """
+cmd /k "cd /d $CWDIR$\\venv\Scripts & activate.bat & cd /d $CWDIR$ & pip install -r requirements.txt"
+"""
+host_run = """
+cmd /k "cd /d $CWDIR$\\venv\Scripts & activate.bat & cd /d $CWDIR$ & python main.py"
+"""
+
 settings = {
     "ownerIDs": [],
     "asyncio_gather": True,
@@ -131,25 +141,19 @@ def main(
     debug_printing,
     spammy_debug_printing,
     bot_token,
+    docker_mode,
     build,
     run,
 ):
     global dockerfile
     global docker_build
     global docker_run
+    global host_build
+    global host_run
     global settings
     global token
 
-    dockerfile = dockerfile.replace("$DEPLOYMENT_ID$", deployment_id)
-
-    docker_build = docker_build.replace("$DEPLOYMENT_ID$", deployment_id)
-
-    docker_run = docker_run.replace("$DEPLOYMENT_ID$", deployment_id)
-    docker_run = docker_run.replace(
-        " $AUTO_RESTART$ ", " --restart=on-failure " if auto_restart else " "
-    )
-
-    settings["dataPath"] = f"/{deployment_id}_data"
+    settings["dataPath"] = f"{'' if docker_mode else '.'}/{deployment_id}_data"
     settings["asyncio_gather"] = asyncio_gather
     settings["caching"] = caching
     settings["ownerIDs"] = owner_ids
@@ -157,15 +161,6 @@ def main(
     settings["spammyDebugPrinting"] = spammy_debug_printing
 
     token["token"] = bot_token
-
-    with open("./dockerfile", "w") as w:
-        w.write(dockerfile)
-
-    with open("./build.bat", "w") as w:
-        w.write(docker_build)
-
-    with open("./run.bat", "w") as w:
-        w.write(docker_run)
 
     with open("./settings.json", "w") as w:
         w.write(json.dumps(settings, indent=4))
@@ -175,18 +170,60 @@ def main(
 
     print("Deployment files generated!")
 
-    if build:
-        print("Building docker image...")
+    if docker_mode:
+        dockerfile = dockerfile.replace("$DEPLOYMENT_ID$", deployment_id)
 
-        os.system("build.bat")
+        docker_build = docker_build.replace("$DEPLOYMENT_ID$", deployment_id)
 
-        print("Docker image built!")
-    if run:
-        print("Running docker image...")
+        docker_run = docker_run.replace("$DEPLOYMENT_ID$", deployment_id)
+        docker_run = docker_run.replace(
+            " $AUTO_RESTART$ ", " --restart=on-failure " if auto_restart else " "
+        )
 
-        os.system("run.bat")
+        with open("./dockerfile", "w") as w:
+            w.write(dockerfile)
 
-        print("Docker image running!")
+        with open("./build.bat", "w") as w:
+            w.write(docker_build)
+
+        with open("./run.bat", "w") as w:
+            w.write(docker_run)
+
+        if build:
+            print("Building docker image...")
+
+            os.system("build.bat")
+
+            print("Docker image built!")
+
+        if run:
+            print("Running docker image...")
+
+            os.system("run.bat")
+
+            print("Docker image running!")
+    else:
+        host_build = host_build.replace("$CWDIR$", os.getcwd())
+        host_run = host_run.replace("$CWDIR$", os.getcwd())
+
+        with open("./build.bat", "w") as w:
+            w.write(host_build)
+
+        with open("./run.bat", "w") as w:
+            w.write(host_run)
+
+        if build:
+            print("Building venv...")
+
+            os.system("build.bat")
+
+            print("Built venv!")
+        if run:
+            print("Running...")
+
+            os.system("run.bat")
+
+            print("Bot running!")
 
 
 if __name__ == "__main__":
