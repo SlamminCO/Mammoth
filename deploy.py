@@ -114,7 +114,7 @@ docker run $AUTO_RESTART$ -d --name=$DEPLOYMENT_ID$ --mount source=$DEPLOYMENT_I
 """
 
 host_build = """
-cmd /k "cd /d $CWDIR$\\venv\Scripts & activate.bat & cd /d $CWDIR$ & pip install -r requirements.txt"
+cmd /k "python -m venv venv & cd /d $CWDIR$\\venv\Scripts & activate.bat & cd /d $CWDIR$ & pip install -r requirements.txt & exit"
 """
 host_run = """
 cmd /k "cd /d $CWDIR$\\venv\Scripts & activate.bat & cd /d $CWDIR$ & python main.py"
