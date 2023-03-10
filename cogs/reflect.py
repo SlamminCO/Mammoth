@@ -313,14 +313,24 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             return
         if not settings_data.get("enabled", DEFAULT_REFLECT_COG_SETTINGS["enabled"]):
             return
-        if channel.id in settings_data.get("ignored_channel_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"]):
+        if channel.id in settings_data.get(
+            "ignored_channel_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"]
+        ):
             return
-        if channel.id == (reflect_channel_id := settings_data.get("reflect_channel_id", DEFAULT_REFLECT_COG_SETTINGS["reflect_channel_id"])):
+        if channel.id == (
+            reflect_channel_id := settings_data.get(
+                "reflect_channel_id", DEFAULT_REFLECT_COG_SETTINGS["reflect_channel_id"]
+            )
+        ):
             return
-        if message.author.id in settings_data.get("ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"]):
+        if message.author.id in settings_data.get(
+            "ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"]
+        ):
             return
         for role in message.author.roles:
-            if role.id in settings_data.get("ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"]):
+            if role.id in settings_data.get(
+                "ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"]
+            ):
                 return
         if not (reflect_channel := guild.get_channel(reflect_channel_id)):
             return
@@ -563,13 +573,30 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             return
 
         ignored_channels = ", ".join(
-            [f"<#{channel_id}>" for channel_id in settings_data.get("ignored_channel_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"])]
+            [
+                f"<#{channel_id}>"
+                for channel_id in settings_data.get(
+                    "ignored_channel_ids",
+                    DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"],
+                )
+            ]
         )
         ignored_roles = ", ".join(
-            [f"<@&{role_id}>" for role_id in settings_data.get("ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"])]
+            [
+                f"<@&{role_id}>"
+                for role_id in settings_data.get(
+                    "ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"]
+                )
+            ]
         )
         ignored_members = ", ".join(
-            [f"<@{member_id}>" for member_id in settings_data.get("ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"])]
+            [
+                f"<@{member_id}>"
+                for member_id in settings_data.get(
+                    "ignored_member_ids",
+                    DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"],
+                )
+            ]
         )
 
         await interaction.response.send_message(
@@ -594,7 +621,9 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if member.id in settings_data.get("ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"]):
+            if member.id in settings_data.get(
+                "ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"]
+            ):
                 await interaction.followup.send(
                     f"{member.mention} is already ignored!", ephemeral=True
                 )
@@ -623,7 +652,10 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if channel.id in settings_data.get("ignored_channel_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"]):
+            if channel.id in settings_data.get(
+                "ignored_channel_ids",
+                DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"],
+            ):
                 await interaction.followup.send(
                     f"{channel.mention} is already ignored!", ephemeral=True
                 )
@@ -652,7 +684,9 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if role.id in settings_data.get("ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"]):
+            if role.id in settings_data.get(
+                "ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"]
+            ):
                 await interaction.followup.send(
                     f"{role.mention} is already ignored!", ephemeral=True
                 )
@@ -684,7 +718,9 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if not member.id in settings_data.get("ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"]):
+            if not member.id in settings_data.get(
+                "ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"]
+            ):
                 await interaction.followup.send(
                     f"{member.mention} is not ignored!", ephemeral=True
                 )
@@ -706,14 +742,17 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         guild = interaction.guild
 
         await interaction.response.defer(thinking=True, ephemeral=True)
-        
+
         async with safe_edit(COG, guild, "settings") as settings_data:
             if not await self.cog_is_enabled(settings_data, interaction):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if not channel.id in settings_data.get("ignored_channel_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"]):
+            if not channel.id in settings_data.get(
+                "ignored_channel_ids",
+                DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"],
+            ):
                 await interaction.followup.send(
                     f"{channel.mention} is not ignored!", ephemeral=True
                 )
@@ -742,7 +781,9 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if not role.id in settings_data.get("ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"]):
+            if not role.id in settings_data.get(
+                "ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"]
+            ):
                 await interaction.followup.send(
                     f"{role.mention} is not ignored!", ephemeral=True
                 )
@@ -756,14 +797,10 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
     async def cog_is_enabled(settings_data: dict, interaction: discord.Interaction):
         if not settings_data:
-            await interaction.followup.send(
-                "Reflect is not enabled!", ephemeral=True
-            )
+            await interaction.followup.send("Reflect is not enabled!", ephemeral=True)
             return False
         if not settings_data.get("enabled", DEFAULT_REFLECT_COG_SETTINGS["enabled"]):
-            await interaction.followup.send(
-                "Reflect is not enabled!", ephemeral=True
-            )
+            await interaction.followup.send("Reflect is not enabled!", ephemeral=True)
             return False
 
         return True
