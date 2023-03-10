@@ -494,7 +494,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         await interaction.response.defer(thinking=True, ephemeral=True)
 
         async with safe_edit(COG, guild, "settings") as settings_data:
-            if not await self.cog_is_enabled(settings_data, interaction):
+            if not settings_data:
                 settings_data: dict = DEFAULT_REFLECT_COG_SETTINGS.copy()
             if settings_data.get("enabled", DEFAULT_REFLECT_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
