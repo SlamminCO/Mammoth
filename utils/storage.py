@@ -19,10 +19,10 @@ DATA_PATH = SETTINGS["dataPath"]
 
 
 def update_dict_defaults(defaults: dict, data_dict: dict):
-        for key, value in defaults.items():
-            if key not in data_dict:
-                data_dict[key] = value
-                
+    for key, value in defaults.items():
+        if key not in data_dict:
+            data_dict[key] = value
+
 
 def safe_read(scope: str, guild: discord.Guild, key: str) -> dict:
     base_path = f"{DATA_PATH}/{scope}/{guild.id}"
@@ -34,7 +34,7 @@ def safe_read(scope: str, guild: discord.Guild, key: str) -> dict:
     if not os.path.exists(file_path):
         os.makedirs(base_path, exist_ok=True)
         log.debug(f"File was not found [{file_path}]")
-        
+
         data_dict: dict = {}
     else:
         try:
