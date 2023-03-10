@@ -3,12 +3,13 @@ from main import Mammoth
 from utils.storage import safe_read, safe_edit
 from discord.ui import Button, View, Select
 from lib.ui import HashBlacklistButton
-from utils.debug import DebugPrinter
 from utils.hash import LinkHash, get_media_sorted_link_hashes_from_message
 from utils.link import get_media_sorted_links_from_message
+import traceback
 import discord
 import json
 import asyncio
+import logging
 
 
 COG = __name__
@@ -23,12 +24,11 @@ DEFAULT_ALERTS_COG_SETTINGS = {
     "alert_threshold": None,
 }
 
+log = logging.getLogger(COG)
+
+
 with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
-
-
-debug_printer = DebugPrinter(COG, SETTINGS["debugPrinting"])
-dprint = debug_printer.dprint
 
 
 class AlertsCogSettingsObject:
@@ -295,10 +295,8 @@ class SubmitButton(Button):
             await interaction.followup.send(
                 "Your report has been submitted, thank you!", ephemeral=True
             )
-        except Exception as e:
-            dprint(
-                f"Report failed in guild [{self.message.guild}] on message id [{self.message.id}]\n\n{e}\n"
-            )
+        except Exception:
+            log.exception(traceback.format_exc())
 
             await interaction.followup.send(
                 "There was an issue submitting your report, please try again later...",
@@ -435,7 +433,6 @@ class SubmitButton(Button):
         link_hash: LinkHash,
         content: str = None,
     ):
-
         embed = discord.Embed(title="Additional Media")
 
         if self.flaggers:
@@ -517,7 +514,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         super().__init__()
 
-        dprint(f"Loaded {COG}")
+        log.info("Loaded")
 
     @commands.Cog.listener(name="on_raw_reaction_add")
     async def handle_alert_reactions(self, payload: discord.RawReactionActionEvent):

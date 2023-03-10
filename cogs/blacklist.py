@@ -3,19 +3,18 @@ from main import Mammoth
 from lib.ui import HashBlacklistObject
 from utils.storage import safe_read, safe_edit
 from utils.hash import get_media_sorted_link_hashes_from_message
-from utils.debug import DebugPrinter
 import discord
 import json
+import logging
 
 
 COG = __name__
 
+log = logging.getLogger(COG)
+
+
 with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
-
-
-debug_printer = DebugPrinter(COG, SETTINGS["debugPrinting"])
-dprint = debug_printer.dprint
 
 
 @discord.app_commands.guild_only()
@@ -26,7 +25,7 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         super().__init__()
 
-        dprint(f"Loaded {COG}")
+        log.info("Loaded")
 
     @commands.Cog.listener(name="on_message")
     async def handle_blacklisted_content(self, message: discord.Message):

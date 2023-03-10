@@ -1,7 +1,8 @@
 from discord.ext import commands
 from discord import app_commands
 from main import Mammoth
-from utils.debug import DebugPrinter
+import traceback
+import logging
 import discord
 import json
 import os
@@ -9,12 +10,11 @@ import os
 
 COG = __name__
 
+log = logging.getLogger(COG)
+
+
 with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
-
-
-debug_printer = DebugPrinter(COG, SETTINGS["debugPrinting"])
-dprint = debug_printer.dprint
 
 
 def is_owner(interaction: discord.Interaction):
@@ -28,7 +28,7 @@ class OwnerCog(commands.GroupCog, name="owner"):
 
         super().__init__()
 
-        dprint(f"Loaded {COG}")
+        log.info("Loaded")
 
     @app_commands.command(name="load", description="Load a cog.")
     @app_commands.describe(cog="Cog to load")
@@ -55,7 +55,7 @@ class OwnerCog(commands.GroupCog, name="owner"):
             await interaction.response.send_message(
                 f"``{cog}`` failed to load!\n\n```{e}```", ephemeral=True
             )
-            dprint(e)
+            log.exception(traceback.format_exc())
 
     @app_commands.command(name="unload", description="Unload a cog.")
     @app_commands.describe(cog="Cog to unload")
@@ -100,7 +100,7 @@ class OwnerCog(commands.GroupCog, name="owner"):
             await interaction.response.send_message(
                 f"``{cog}`` failed to load!\n\n```{e}```", ephemeral=True
             )
-            dprint(e)
+            log.exception(traceback.format_exc())
 
     @app_commands.command(name="reloadall", description="Reloads all cogs.")
     async def owner_reloadall(self, interaction: discord.Interaction):
@@ -121,7 +121,7 @@ class OwnerCog(commands.GroupCog, name="owner"):
                 messages.append(f"``{cog}`` missing setup function!\n\n")
             except commands.ExtensionFailed as e:
                 messages.append(f"``{cog}`` failed to load!\n\n```{e}```\n\n")
-                dprint(e)
+                log.exception(traceback.format_exc())
 
         await interaction.response.send_message(
             f'Reload:\n\n{"".join(messages)}', ephemeral=True

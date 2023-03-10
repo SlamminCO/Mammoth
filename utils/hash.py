@@ -3,7 +3,6 @@ from typing import Optional, Tuple
 from utils.link import get_media_sorted_links_from_message, MediaSortedLinks
 from PIL import Image
 from utils.storage import safe_read, safe_edit
-from utils.debug import DebugPrinter
 import imagehash
 import discord
 import aiohttp
@@ -15,10 +14,6 @@ import json
 
 with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
-
-
-debug_printer = DebugPrinter(__name__, SETTINGS["debugPrinting"])
-dprint = debug_printer.dprint
 
 
 @dataclass(frozen=True)

@@ -5,7 +5,7 @@ from utils.storage import safe_read, safe_edit
 from discord.ui import Button, View, Select
 from lib.ui import HashBlacklistButton
 from utils.hash import get_media_sorted_link_hashes_from_message, LinkHash
-from utils.debug import DebugPrinter
+import logging
 import discord
 import json
 
@@ -19,14 +19,11 @@ DEFAULT_REFLECT_COG_SETTINGS = {
     "reflect_channel_id": None,
 }
 
+log = logging.getLogger(COG)
+
+
 with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
-
-
-debug_printer = DebugPrinter(COG, SETTINGS["debugPrinting"])
-dprint = debug_printer.dprint
-spam_debug_printer = DebugPrinter(COG, SETTINGS["spammyDebugPrinting"])
-sdprint = spam_debug_printer.dprint
 
 
 class ReflectCogSettingsObject:
@@ -232,7 +229,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         super().__init__()
 
-        dprint(f"Loaded {COG}")
+        log.info(f"Loaded")
 
     async def send_compact_image_reflection(
         self,
@@ -285,7 +282,6 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         link_hash: LinkHash,
         content: str = None,
     ):
-
         embed = discord.Embed(title="Additional Media")
 
         embed.add_field(name="URL", value=link_hash.link, inline=False)
@@ -338,7 +334,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             message
         )
         time_total = time() - time_start
-        dprint(
+        log.debug(
             f"Hashing took {time_total} second{'' if time_total == 1 else 's'} for Guild: [{guild}] Message: [{message.id}]"
         )
 
@@ -574,7 +570,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         )
 
     reflect_ignore_group = discord.app_commands.Group(
-        name="ignore", description="Exclude members, channels and roles from reflection."
+        name="ignore",
+        description="Exclude members, channels and roles from reflection.",
     )
 
     @reflect_ignore_group.command(
@@ -642,9 +639,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if member.id in (
-                ignored_member_ids := settings.get("ignored_member_ids")
-            ):
+            if member.id in (ignored_member_ids := settings.get("ignored_member_ids")):
                 await interaction.followup.send(
                     f"{member.mention} is already ignored!", ephemeral=True
                 )
@@ -657,7 +652,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         await interaction.followup.send(
             f"Now ignoring {member.mention}!", ephemeral=True
         )
-    
+
     @reflect_ignore_group.command(
         name="channel", description="Exclude a channel from reflection."
     )
