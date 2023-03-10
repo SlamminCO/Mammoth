@@ -309,22 +309,18 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         if not isinstance(message.author, discord.Member):
             return
 
-        storage_object = safe_read(COG, guild, "settings")
-
-        if not (settings := storage_object.get()):
+        if not (settings_data := safe_read(COG, guild, "settings")):
             return
-        if not isinstance(settings, ReflectCogSettingsObject):
+        if not settings_data.get("enabled", DEFAULT_REFLECT_COG_SETTINGS["enabled"]):
             return
-        if not settings.get("enabled"):
+        if channel.id in settings_data.get("ignored_channel_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"]):
             return
-        if channel.id in settings.get("ignored_channel_ids"):
+        if channel.id == (reflect_channel_id := settings_data.get("reflect_channel_id", DEFAULT_REFLECT_COG_SETTINGS["reflect_channel_id"])):
             return
-        if channel.id == (reflect_channel_id := settings.get("reflect_channel_id")):
-            return
-        if message.author.id in settings.get("ignored_member_ids"):
+        if message.author.id in settings_data.get("ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"]):
             return
         for role in message.author.roles:
-            if role.id in settings.get("ignored_role_ids"):
+            if role.id in settings_data.get("ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"]):
                 return
         if not (reflect_channel := guild.get_channel(reflect_channel_id)):
             return
@@ -579,32 +575,26 @@ class ReflectCog(commands.GroupCog, name="reflect"):
     )
     async def reflect_ignore_list(self, interaction: discord.Interaction):
         guild = interaction.guild
-        storage_object = safe_read(COG, guild, "settings")
 
-        if not (settings := storage_object.get()):
+        if not (settings_data := safe_read(COG, guild, "settings")):
             await interaction.response.send_message(
                 "Reflect is not enabled!", ephemeral=True
             )
             return
-        if not isinstance(settings, ReflectCogSettingsObject):
-            await interaction.response.send_message(
-                "Reflect is not enabled!", ephemeral=True
-            )
-            return
-        if not settings.get("enabled"):
+        if not settings_data.get("enabled", DEFAULT_REFLECT_COG_SETTINGS["enabled"]):
             await interaction.response.send_message(
                 "Reflect is not enabled!", ephemeral=True
             )
             return
 
         ignored_channels = ", ".join(
-            [f"<#{channel_id}>" for channel_id in settings.get("ignored_channel_ids")]
+            [f"<#{channel_id}>" for channel_id in settings_data.get("ignored_channel_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"])]
         )
         ignored_roles = ", ".join(
-            [f"<@&{role_id}>" for role_id in settings.get("ignored_role_ids")]
+            [f"<@&{role_id}>" for role_id in settings_data.get("ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"])]
         )
         ignored_members = ", ".join(
-            [f"<@{member_id}>" for member_id in settings.get("ignored_member_ids")]
+            [f"<@{member_id}>" for member_id in settings_data.get("ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"])]
         )
 
         await interaction.response.send_message(
