@@ -1,5 +1,5 @@
 from discord.ui import Button
-from utils.storage import safe_read, safe_edit
+from utils.storage import safe_read, safe_edit, update_dict_defaults
 from utils.hash import LinkHash
 from cogs.blacklist import DEFAULT_HASH_BLACKLIST
 import discord
@@ -33,7 +33,7 @@ class HashBlacklistButton(Button):
             if not hash_blacklist_data or not hash_blacklist_data.get(
                 "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
             ):
-                hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
+                update_dict_defaults(hash_blacklist_data, DEFAULT_HASH_BLACKLIST)
             if (
                 self.link_hash.md5 in hash_blacklist_data["blacklist"]
                 or self.link_hash.image_hash in hash_blacklist_data["blacklist"]

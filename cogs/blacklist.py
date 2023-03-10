@@ -1,6 +1,6 @@
 from discord.ext import commands
 from main import Mammoth
-from utils.storage import safe_read, safe_edit
+from utils.storage import safe_read, safe_edit, update_dict_defaults
 from utils.hash import get_media_sorted_link_hashes_from_message
 import discord
 import json
@@ -103,11 +103,11 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         async with safe_edit("global", guild, "hash_blacklist") as hash_blacklist_data:
             if not hash_blacklist_data:
-                hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
+                update_dict_defaults(hash_blacklist_data, DEFAULT_HASH_BLACKLIST)
             if not hash_blacklist_data.get(
                 "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
             ):
-                hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
+                update_dict_defaults(hash_blacklist_data, DEFAULT_HASH_BLACKLIST)
             if hash in hash_blacklist_data["blacklist"]:
                 await interaction.followup.send(
                     f"``{hash}`` is already blacklisted!", ephemeral=True
@@ -131,11 +131,11 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         async with safe_edit("global", guild, "hash_blacklist") as hash_blacklist_data:
             if not hash_blacklist_data:
-                hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
+                update_dict_defaults(hash_blacklist_data, DEFAULT_HASH_BLACKLIST)
             if not hash_blacklist_data.get(
                 "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
             ):
-                hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
+                update_dict_defaults(hash_blacklist_data, DEFAULT_HASH_BLACKLIST)
             if hash not in hash_blacklist_data["blacklist"]:
                 await interaction.followup.send(
                     f"``{hash}`` is not blacklisted!", ephemeral=True

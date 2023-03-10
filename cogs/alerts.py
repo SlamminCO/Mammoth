@@ -1,6 +1,6 @@
 from discord.ext import commands
 from main import Mammoth
-from utils.storage import safe_read, safe_edit
+from utils.storage import safe_read, safe_edit, update_dict_defaults
 from discord.ui import Button, View, Select
 from lib.ui import HashBlacklistButton
 from utils.hash import LinkHash, get_media_sorted_link_hashes_from_message
@@ -698,7 +698,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         async with safe_edit(COG, guild, "settings") as settings_data:
             if not settings_data:
-                settings_data: dict = DEFAULT_ALERTS_COG_SETTINGS.copy()
+                update_dict_defaults(settings_data, DEFAULT_ALERTS_COG_SETTINGS)
             if settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are already enabled!", ephemeral=True

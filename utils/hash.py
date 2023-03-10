@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 from utils.link import get_media_sorted_links_from_message, MediaSortedLinks
 from PIL import Image
-from utils.storage import safe_read, safe_edit
+from utils.storage import safe_read, safe_edit, update_dict_defaults
 import imagehash
 import discord
 import aiohttp
@@ -12,9 +12,7 @@ import io
 import json
 
 
-DEFAULT_URL_TO_LINK_HASH_CACHE = {
-    "cache": {}
-}
+DEFAULT_URL_TO_LINK_HASH_CACHE = {"cache": {}}
 
 
 with open("./settings.json", "r") as r:
@@ -101,7 +99,11 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
     tasks = []
 
     if SETTINGS["caching"]:
-        if not (temp_url_to_link_hash_cache_data := safe_read("global", guild, "url_to_link_hash_cache")):
+        if not (
+            temp_url_to_link_hash_cache_data := safe_read(
+                "global", guild, "url_to_link_hash_cache"
+            )
+        ):
             temp_url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE.copy()
     else:
         temp_url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE.copy()
@@ -167,12 +169,14 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
             if not url_to_link_hash_cache_data or not url_to_link_hash_cache_data.get(
                 "cache", DEFAULT_URL_TO_LINK_HASH_CACHE["cache"]
             ):
-                url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE.copy()
+                update_dict_defaults(
+                    url_to_link_hash_cache_data, DEFAULT_URL_TO_LINK_HASH_CACHE
+                )
 
             for url, link_hash in temp_url_to_link_hash_cache_data["cache"]:
                 if not url_to_link_hash_cache_data.get(url):
                     url_to_link_hash_cache_data["cache"][url] = link_hash
-                    
+
     return MediaSortedLinkHashes(
         image_link_hashes, video_link_hashes, audio_link_hashes, other_link_hashes
     )

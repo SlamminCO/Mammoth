@@ -1,7 +1,7 @@
 from time import time
 from discord.ext import commands
 from main import Mammoth
-from utils.storage import safe_read, safe_edit
+from utils.storage import safe_read, safe_edit, update_dict_defaults
 from discord.ui import Button, View, Select
 from lib.ui import HashBlacklistButton
 from utils.hash import get_media_sorted_link_hashes_from_message, LinkHash
@@ -495,7 +495,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         async with safe_edit(COG, guild, "settings") as settings_data:
             if not settings_data:
-                settings_data: dict = DEFAULT_REFLECT_COG_SETTINGS.copy()
+                update_dict_defaults(DEFAULT_REFLECT_COG_SETTINGS, settings_data)
             if settings_data.get("enabled", DEFAULT_REFLECT_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Reflect is already enabled!", ephemeral=True
