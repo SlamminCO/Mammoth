@@ -483,20 +483,17 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
-                settings = ReflectCogSettingsObject()
-            if not isinstance(settings, ReflectCogSettingsObject):
-                settings = ReflectCogSettingsObject()
-            if settings.get("enabled"):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not await self.cog_is_enabled(settings_data, interaction):
+                settings_data = DEFAULT_REFLECT_COG_SETTINGS
+            if settings_data.get("enabled", DEFAULT_REFLECT_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Reflect is already enabled!", ephemeral=True
                 )
                 return
 
-            settings.set("enabled", True)
-            settings.set("reflect_channel_id", reflect_channel.id)
-            storage_object.set(settings)
+            settings_data["enabled"] = True
+            settings_data["reflect_channel_id"] = reflect_channel.id
 
         await interaction.followup.send("Reflect enabled!", ephemeral=True)
 
@@ -508,25 +505,14 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not await self.cog_is_enabled(settings_data, interaction):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
 
-            settings.set("enabled", False)
-            storage_object.set(settings)
+            settings_data["enabled"] = False
 
         await interaction.followup.send("Reflect disabled!", ephemeral=True)
 
@@ -541,25 +527,14 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not await self.cog_is_enabled(settings_data, interaction):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
 
-            settings.set("reflect_channel_id", reflect_channel.id)
-            storage_object.set(settings)
+            settings_data["reflect_channel_id"] = reflect_channel.id
 
         await interaction.followup.send(
             f"Reflect channel changed to {reflect_channel.mention}!", ephemeral=True
@@ -613,31 +588,19 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not await self.cog_is_enabled(settings_data, interaction):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if member.id in (ignored_member_ids := settings.get("ignored_member_ids")):
+            if member.id in settings_data.get("ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"]):
                 await interaction.followup.send(
                     f"{member.mention} is already ignored!", ephemeral=True
                 )
                 return
 
-            ignored_member_ids.append(member.id)
-            settings.set("ignored_member_ids", ignored_member_ids)
-            storage_object.set(settings)
+            settings_data["ignored_member_ids"].append(member.id)
 
         await interaction.followup.send(
             f"Now ignoring {member.mention}!", ephemeral=True
@@ -654,33 +617,19 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not await self.cog_is_enabled(settings_data, interaction):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if channel.id in (
-                ignored_channel_ids := settings.get("ignored_channel_ids")
-            ):
+            if channel.id in settings_data.get("ignored_channel_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"]):
                 await interaction.followup.send(
                     f"{channel.mention} is already ignored!", ephemeral=True
                 )
                 return
 
-            ignored_channel_ids.append(channel.id)
-            settings.set("ignored_channel_ids", ignored_channel_ids)
-            storage_object.set(settings)
+            settings_data["ignored_channel_ids"].append(channel.id)
 
         await interaction.followup.send(
             f"Now ignoring {channel.mention}!", ephemeral=True
@@ -697,31 +646,19 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not await self.cog_is_enabled(settings_data, interaction):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if role.id in (ignored_role_ids := settings.get("ignored_role_ids")):
+            if role.id in settings_data.get("ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"]):
                 await interaction.followup.send(
                     f"{role.mention} is already ignored!", ephemeral=True
                 )
                 return
 
-            ignored_role_ids.append(role.id)
-            settings.set("ignored_role_ids", ignored_role_ids)
-            storage_object.set(settings)
+            settings_data["ignored_role_ids"].append(role.id)
 
         await interaction.followup.send(f"Now ignoring {role.mention}!", ephemeral=True)
 
@@ -741,33 +678,19 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not await self.cog_is_enabled(settings_data, interaction):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not member.id in (
-                ignored_member_ids := settings.get("ignored_member_ids")
-            ):
+            if not member.id in settings_data.get("ignored_member_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_member_ids"]):
                 await interaction.followup.send(
                     f"{member.mention} is not ignored!", ephemeral=True
                 )
                 return
 
-            ignored_member_ids.remove(member.id)
-            settings.set("ignored_member_ids", ignored_member_ids)
-            storage_object.set(settings)
+            settings_data["ignored_member_ids"].remove(member.id)
 
         await interaction.followup.send(
             f"No longer ignoring {member.mention}!", ephemeral=True
@@ -783,34 +706,20 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         guild = interaction.guild
 
         await interaction.response.defer(thinking=True, ephemeral=True)
-
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not await self.cog_is_enabled(settings_data, interaction):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not channel.id in (
-                ignored_channel_ids := settings.get("ignored_channel_ids")
-            ):
+            if not channel.id in settings_data.get("ignored_channel_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_channel_ids"]):
                 await interaction.followup.send(
                     f"{channel.mention} is not ignored!", ephemeral=True
                 )
                 return
 
-            ignored_channel_ids.remove(channel.id)
-            settings.set("ignored_channel_ids", ignored_channel_ids)
-            storage_object.set(settings)
+            settings_data["ignored_channel_ids"].remove(channel.id)
 
         await interaction.followup.send(
             f"No longer ignoring {channel.mention}!", ephemeral=True
@@ -827,35 +736,37 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not await self.cog_is_enabled(settings_data, interaction):
                 await interaction.followup.send(
                     "Reflect is not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, ReflectCogSettingsObject):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Reflect is not enabled!", ephemeral=True
-                )
-                return
-            if not role.id in (ignored_role_ids := settings.get("ignored_role_ids")):
+            if not role.id in settings_data.get("ignored_role_ids", DEFAULT_REFLECT_COG_SETTINGS["ignored_role_ids"]):
                 await interaction.followup.send(
                     f"{role.mention} is not ignored!", ephemeral=True
                 )
                 return
 
-            ignored_role_ids.remove(role.id)
-            settings.set("ignored_role_ids", ignored_role_ids)
-            storage_object.set(settings)
+            settings_data["ignored_role_ids"].remove(role.id)
 
         await interaction.followup.send(
             f"No longer ignoring {role.mention}!", ephemeral=True
         )
+
+    async def cog_is_enabled(settings_data: dict, interaction: discord.Interaction):
+        if not settings_data:
+            await interaction.followup.send(
+                "Reflect is not enabled!", ephemeral=True
+            )
+            return False
+        if not settings_data.get("enabled", DEFAULT_REFLECT_COG_SETTINGS["enabled"]):
+            await interaction.followup.send(
+                "Reflect is not enabled!", ephemeral=True
+            )
+            return False
+
+        return True
 
 
 async def setup(bot: Mammoth):
