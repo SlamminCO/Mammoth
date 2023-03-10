@@ -33,7 +33,7 @@ class HashBlacklistButton(Button):
             if not hash_blacklist_data or not hash_blacklist_data.get(
                 "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
             ):
-                update_dict_defaults(hash_blacklist_data, DEFAULT_HASH_BLACKLIST)
+                update_dict_defaults(DEFAULT_HASH_BLACKLIST, hash_blacklist_data)
             if (
                 self.link_hash.md5 in hash_blacklist_data["blacklist"]
                 or self.link_hash.image_hash in hash_blacklist_data["blacklist"]

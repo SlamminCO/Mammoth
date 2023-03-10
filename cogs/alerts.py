@@ -698,7 +698,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         async with safe_edit(COG, guild, "settings") as settings_data:
             if not settings_data:
-                update_dict_defaults(settings_data, DEFAULT_ALERTS_COG_SETTINGS)
+                update_dict_defaults(DEFAULT_ALERTS_COG_SETTINGS, settings_data)
             if settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are already enabled!", ephemeral=True
@@ -920,7 +920,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         settings_data = safe_read(COG, guild, "settings")
 
         if not await self.cog_is_enabled(settings_data, interaction):
-                return
+            return
 
         trusted_members = ", ".join(
             [
@@ -1073,14 +1073,10 @@ class AlertsCog(commands.GroupCog, name="alerts"):
     @staticmethod
     async def cog_is_enabled(settings_data: dict, interaction: discord.Interaction):
         if not settings_data:
-            await interaction.followup.send(
-                "Alerts are not enabled!", ephemeral=True
-            )
+            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
             return False
         if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
-            await interaction.followup.send(
-                "Alerts are not enabled!", ephemeral=True
-            )
+            await interaction.followup.send("Alerts are not enabled!", ephemeral=True)
             return False
 
         return True

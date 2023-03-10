@@ -103,11 +103,11 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         async with safe_edit("global", guild, "hash_blacklist") as hash_blacklist_data:
             if not hash_blacklist_data:
-                update_dict_defaults(hash_blacklist_data, DEFAULT_HASH_BLACKLIST)
+                update_dict_defaults(DEFAULT_HASH_BLACKLIST, hash_blacklist_data)
             if not hash_blacklist_data.get(
                 "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
             ):
-                update_dict_defaults(hash_blacklist_data, DEFAULT_HASH_BLACKLIST)
+                update_dict_defaults(DEFAULT_HASH_BLACKLIST, hash_blacklist_data)
             if hash in hash_blacklist_data["blacklist"]:
                 await interaction.followup.send(
                     f"``{hash}`` is already blacklisted!", ephemeral=True
@@ -131,11 +131,11 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         async with safe_edit("global", guild, "hash_blacklist") as hash_blacklist_data:
             if not hash_blacklist_data:
-                update_dict_defaults(hash_blacklist_data, DEFAULT_HASH_BLACKLIST)
+                update_dict_defaults(DEFAULT_HASH_BLACKLIST, hash_blacklist_data)
             if not hash_blacklist_data.get(
                 "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
             ):
-                update_dict_defaults(hash_blacklist_data, DEFAULT_HASH_BLACKLIST)
+                update_dict_defaults(DEFAULT_HASH_BLACKLIST, hash_blacklist_data)
             if hash not in hash_blacklist_data["blacklist"]:
                 await interaction.followup.send(
                     f"``{hash}`` is not blacklisted!", ephemeral=True
