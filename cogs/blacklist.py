@@ -1,6 +1,5 @@
 from discord.ext import commands
 from main import Mammoth
-from lib.ui import HashBlacklistObject
 from utils.storage import safe_read, safe_edit
 from utils.hash import get_media_sorted_link_hashes_from_message
 import discord
@@ -9,6 +8,7 @@ import logging
 
 
 COG = __name__
+DEFAULT_HASH_BLACKLIST = {"blacklist": []}
 
 log = logging.getLogger(COG)
 
@@ -43,15 +43,18 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
             + media_sorted_link_hashes.audio_link_hashes
         )
 
-        storage_object = safe_read("global", guild, "hash_blacklist")
-
-        if not (hash_blacklist := storage_object.get()):
+        if not (hash_blacklist_data := safe_read("global", guild, "hash_blacklist")):
             return
-        if not isinstance(hash_blacklist, HashBlacklistObject):
+        if not hash_blacklist_data.get(
+            "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
+        ):
             return
 
         for link_hash in all_media_sorted_link_hashes:
-            if hash_blacklist.link_hash_blacklisted(link_hash):
+            if (
+                link_hash.md5 in hash_blacklist_data["blacklist"]
+                or link_hash.image_hash in hash_blacklist_data["blacklist"]
+            ):
                 try:
                     await message.delete()
 
@@ -71,14 +74,16 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
     async def blacklist_list(self, interaction: discord.Interaction):
         guild = interaction.guild
 
-        storage_object = safe_read("global", guild, "hash_blacklist")
+        if not (hash_blacklist_data := safe_read("global", guild, "hash_blacklist")):
+            hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+        if not hash_blacklist_data.get(
+            "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
+        ):
+            hash_blacklist_data = DEFAULT_HASH_BLACKLIST
 
-        if not (hash_blacklist := storage_object.get()):
-            hash_blacklist = HashBlacklistObject()
-        if not isinstance(hash_blacklist, HashBlacklistObject):
-            hash_blacklist = HashBlacklistObject()
-
-        hash_blacklist = ", ".join([f"``{hash}``" for hash in hash_blacklist.all()])
+        hash_blacklist = ", ".join(
+            [f"``{hash}``" for hash in hash_blacklist["blacklist"]]
+        )
 
         await interaction.response.send_message(
             f"Hashes Blacklisted: {hash_blacklist}",
@@ -96,19 +101,20 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit("global", guild, "hash_blacklist") as storage_object:
-            if not (hash_blacklist := storage_object.get()):
-                hash_blacklist = HashBlacklistObject()
-            if not isinstance(hash_blacklist, HashBlacklistObject):
-                hash_blacklist = HashBlacklistObject()
-            if hash_blacklist.string_blacklisted(hash):
+        async with safe_edit("global", guild, "hash_blacklist") as hash_blacklist_data:
+            if not hash_blacklist_data:
+                hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+            if not hash_blacklist_data.get(
+                "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
+            ):
+                hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+            if hash in hash_blacklist_data["blacklist"]:
                 await interaction.followup.send(
                     f"``{hash}`` is already blacklisted!", ephemeral=True
                 )
                 return
 
-            hash_blacklist.add(hash)
-            storage_object.set(hash_blacklist)
+            hash_blacklist_data["blacklist"].append(hash)
 
         await interaction.followup.send(f"``{hash}`` blacklisted!", ephemeral=True)
 
@@ -123,21 +129,20 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(
-            "global", guild, "hash_blacklist"
-        ) as hash_blacklist_storage_object:
-            if not (hash_blacklist := hash_blacklist_storage_object.get()):
-                hash_blacklist = HashBlacklistObject()
-            if not isinstance(hash_blacklist, HashBlacklistObject):
-                hash_blacklist = HashBlacklistObject()
-            if not hash_blacklist.string_blacklisted(hash):
+        async with safe_edit("global", guild, "hash_blacklist") as hash_blacklist_data:
+            if not hash_blacklist_data:
+                hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+            if not hash_blacklist_data.get(
+                "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
+            ):
+                hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+            if hash not in hash_blacklist_data["blacklist"]:
                 await interaction.followup.send(
                     f"``{hash}`` is not blacklisted!", ephemeral=True
                 )
                 return
 
-            hash_blacklist.remove(hash)
-            hash_blacklist_storage_object.set(hash_blacklist)
+            hash_blacklist_data["blacklist"].remove(hash)
 
         await interaction.followup.send(f"``{hash}`` unblacklisted!", ephemeral=True)
 
