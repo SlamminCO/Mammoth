@@ -33,7 +33,7 @@ class HashBlacklistButton(Button):
             if not hash_blacklist_data or not hash_blacklist_data.get(
                 "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
             ):
-                hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+                hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
             if (
                 self.link_hash.md5 in hash_blacklist_data["blacklist"]
                 or self.link_hash.image_hash in hash_blacklist_data["blacklist"]
@@ -90,11 +90,11 @@ class HashBlacklistButton(Button):
                 "global", self.message.guild, "hash_blacklist"
             )
         ):
-            hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+            hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
         if not hash_blacklist_data.get(
             "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
         ):
-            hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+            hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
 
         self.label = (
             "Unblacklist"

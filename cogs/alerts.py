@@ -33,7 +33,7 @@ with open("./settings.json", "r") as r:
 
 class AlertsCogSettingsObject:
     def __init__(self):
-        self.settings = DEFAULT_ALERTS_COG_SETTINGS
+        self.settings = DEFAULT_ALERTS_COG_SETTINGS.copy()
 
     def update(self):
         for key in DEFAULT_ALERTS_COG_SETTINGS:
@@ -698,7 +698,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         async with safe_edit(COG, guild, "settings") as settings_data:
             if not settings_data:
-                settings_data: dict = DEFAULT_ALERTS_COG_SETTINGS
+                settings_data: dict = DEFAULT_ALERTS_COG_SETTINGS.copy()
             if settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are already enabled!", ephemeral=True

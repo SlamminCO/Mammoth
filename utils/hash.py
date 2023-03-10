@@ -102,9 +102,9 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
 
     if SETTINGS["caching"]:
         if not (temp_url_to_link_hash_cache_data := safe_read("global", guild, "url_to_link_hash_cache")):
-            temp_url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE
+            temp_url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE.copy()
     else:
-        temp_url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE
+        temp_url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE.copy()
 
     for link in media_sorted_links.image_links:
         if not (link_hash_data := temp_url_to_link_hash_cache_data["cache"].get(link)):
@@ -167,7 +167,7 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
             if not url_to_link_hash_cache_data or not url_to_link_hash_cache_data.get(
                 "cache", DEFAULT_URL_TO_LINK_HASH_CACHE["cache"]
             ):
-                url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE
+                url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE.copy()
 
             for url, link_hash in temp_url_to_link_hash_cache_data["cache"]:
                 if not url_to_link_hash_cache_data.get(url):

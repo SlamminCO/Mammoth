@@ -28,7 +28,7 @@ with open("./settings.json", "r") as r:
 
 class ReflectCogSettingsObject:
     def __init__(self):
-        self.settings = DEFAULT_REFLECT_COG_SETTINGS
+        self.settings = DEFAULT_REFLECT_COG_SETTINGS.copy()
 
     def update(self):
         for key in DEFAULT_REFLECT_COG_SETTINGS:
@@ -495,7 +495,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         async with safe_edit(COG, guild, "settings") as settings_data:
             if not await self.cog_is_enabled(settings_data, interaction):
-                settings_data = DEFAULT_REFLECT_COG_SETTINGS
+                settings_data: dict = DEFAULT_REFLECT_COG_SETTINGS.copy()
             if settings_data.get("enabled", DEFAULT_REFLECT_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Reflect is already enabled!", ephemeral=True

@@ -75,11 +75,11 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
         guild = interaction.guild
 
         if not (hash_blacklist_data := safe_read("global", guild, "hash_blacklist")):
-            hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+            hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
         if not hash_blacklist_data.get(
             "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
         ):
-            hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+            hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
 
         hash_blacklist = ", ".join(
             [f"``{hash}``" for hash in hash_blacklist["blacklist"]]
@@ -103,11 +103,11 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         async with safe_edit("global", guild, "hash_blacklist") as hash_blacklist_data:
             if not hash_blacklist_data:
-                hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+                hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
             if not hash_blacklist_data.get(
                 "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
             ):
-                hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+                hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
             if hash in hash_blacklist_data["blacklist"]:
                 await interaction.followup.send(
                     f"``{hash}`` is already blacklisted!", ephemeral=True
@@ -131,11 +131,11 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         async with safe_edit("global", guild, "hash_blacklist") as hash_blacklist_data:
             if not hash_blacklist_data:
-                hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+                hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
             if not hash_blacklist_data.get(
                 "blacklist", DEFAULT_HASH_BLACKLIST["blacklist"]
             ):
-                hash_blacklist_data = DEFAULT_HASH_BLACKLIST
+                hash_blacklist_data = DEFAULT_HASH_BLACKLIST.copy()
             if hash not in hash_blacklist_data["blacklist"]:
                 await interaction.followup.send(
                     f"``{hash}`` is not blacklisted!", ephemeral=True
