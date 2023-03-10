@@ -795,6 +795,7 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             f"No longer ignoring {role.mention}!", ephemeral=True
         )
 
+    @staticmethod
     async def cog_is_enabled(settings_data: dict, interaction: discord.Interaction):
         if not settings_data:
             await interaction.followup.send("Reflect is not enabled!", ephemeral=True)

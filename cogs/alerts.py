@@ -1070,6 +1070,7 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             f"{role.mention} is no longer trusted!", ephemeral=True
         )
 
+    @staticmethod
     async def cog_is_enabled(settings_data: dict, interaction: discord.Interaction):
         if not settings_data:
             await interaction.followup.send(
