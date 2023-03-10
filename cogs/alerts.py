@@ -533,19 +533,27 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         if not (reporter := guild.get_member(payload.user_id)):
             return
 
-        storage_object = safe_read(COG, guild, "settings")
+        settings_data = safe_read(COG, guild, "settings")
 
-        if not (settings := storage_object.get()):
+        if not settings_data:
             return
-        if not isinstance(settings, AlertsCogSettingsObject):
+        if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
             return
-        if not settings.get("enabled"):
+        if str(payload.emoji) != (
+            alert_emoji_str := settings_data.get(
+                "alert_emoji_str", DEFAULT_ALERTS_COG_SETTINGS["alert_emoji_str"]
+            )
+        ):
             return
-        if str(payload.emoji) != (alert_emoji_str := settings.get("alert_emoji_str")):
+        if payload.channel_id in settings_data.get(
+            "ignored_channel_ids", DEFAULT_ALERTS_COG_SETTINGS["ignored_channel_ids"]
+        ):
             return
-        if payload.channel_id in settings.get("ignored_channel_ids"):
-            return
-        if not (alerts_channel_id := settings.get("alerts_channel_id")):
+        if not (
+            alerts_channel_id := settings_data.get(
+                "alerts_channel_id", DEFAULT_ALERTS_COG_SETTINGS["alerts_channel_id"]
+            )
+        ):
             return
         if alerts_channel_id == payload.channel_id:
             return
@@ -553,16 +561,33 @@ class AlertsCog(commands.GroupCog, name="alerts"):
             return
 
         for role in message.author.roles:
-            if role.id in settings.get("trusted_role_ids"):
+            if role.id in settings_data.get(
+                "trusted_role_ids", DEFAULT_ALERTS_COG_SETTINGS["trusted_role_ids"]
+            ):
                 return
 
-        if message.author.id in settings.get("trusted_member_ids"):
+        if message.author.id in settings_data.get(
+            "trusted_member_ids", DEFAULT_ALERTS_COG_SETTINGS["trusted_member_ids"]
+        ):
             return
-        if message.channel.id in settings.get("ignored_channel_ids"):
+        if message.channel.id in settings_data.get(
+            "ignored_channel_ids", DEFAULT_ALERTS_COG_SETTINGS["ignored_channel_ids"]
+        ):
             return
-        if not isinstance((alert_threshold := settings.get("alert_threshold")), int):
+        if not isinstance(
+            (
+                alert_threshold := settings_data.get(
+                    "alert_threshold", DEFAULT_ALERTS_COG_SETTINGS["alert_threshold"]
+                )
+            ),
+            int,
+        ):
             return
-        if not (mod_role_id := settings.get("mod_role_id")):
+        if not (
+            mod_role_id := settings_data.get(
+                "mod_role_id", DEFAULT_ALERTS_COG_SETTINGS["mod_role_id"]
+            )
+        ):
             return
         if not (mod_role := guild.get_role(mod_role_id)):
             return
@@ -608,26 +633,38 @@ class AlertsCog(commands.GroupCog, name="alerts"):
         if not isinstance(message.author, discord.Member):
             return
 
-        storage_object = safe_read(COG, guild, "settings")
+        settings_data = safe_read(COG, guild, "settings")
 
-        if not (settings := storage_object.get()):
+        if not settings_data:
             return
-        if not isinstance(settings, AlertsCogSettingsObject):
+        if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
             return
-        if not settings.get("enabled"):
-            return
-        if not (alerts_channel_id := settings.get("alerts_channel_id")):
+        if not (
+            alerts_channel_id := settings_data.get(
+                "alerts_channel_id", DEFAULT_ALERTS_COG_SETTINGS["alerts_channel_id"]
+            )
+        ):
             return
         if message.channel.id == alerts_channel_id:
             return
-        if not (alert_emoji_str := settings.get("alert_emoji_str")):
+        if not (
+            alert_emoji_str := settings_data.get(
+                "alert_emoji_str", DEFAULT_ALERTS_COG_SETTINGS["alert_emoji_str"]
+            )
+        ):
             return
         for role in message.author.roles:
-            if role.id in settings.get("trusted_role_ids"):
+            if role.id in settings_data.get(
+                "trusted_role_ids", DEFAULT_ALERTS_COG_SETTINGS["trusted_role_ids"]
+            ):
                 return
-        if message.author.id in settings.get("trusted_member_ids"):
+        if message.author.id in settings_data.get(
+            "trusted_member_ids", DEFAULT_ALERTS_COG_SETTINGS["trusted_member_ids"]
+        ):
             return
-        if message.channel.id in settings.get("ignored_channel_ids"):
+        if message.channel.id in settings_data.get(
+            "ignored_channel_ids", DEFAULT_ALERTS_COG_SETTINGS["ignored_channel_ids"]
+        ):
             return
 
         media_sorted_links = get_media_sorted_links_from_message(message)
@@ -659,23 +696,20 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
-                settings = AlertsCogSettingsObject()
-            if not isinstance(settings, AlertsCogSettingsObject):
-                settings = AlertsCogSettingsObject()
-            if settings.get("enabled"):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
+                settings_data: dict = DEFAULT_ALERTS_COG_SETTINGS
+            if settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are already enabled!", ephemeral=True
                 )
                 return
 
-            settings.set("enabled", True)
-            settings.set("alerts_channel_id", alerts_channel.id)
-            settings.set("mod_role_id", mod_role.id)
-            settings.set("alert_emoji_str", str(alert_emoji))
-            settings.set("alert_threshold", alert_threshold)
-            storage_object.set(settings)
+            settings_data["enabled"] = True
+            settings_data["alerts_channel_id"] = alerts_channel.id
+            settings_data["mod_role_id"] = mod_role.id
+            settings_data["alert_emoji_str"] = str(alert_emoji)
+            settings_data["alert_threshold"] = alert_threshold
 
         await interaction.followup.send("Alerts enabled!", ephemeral=True)
 
@@ -685,25 +719,19 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
 
-            settings.set("enabled", False)
-            storage_object.set(settings)
+            settings_data["enabled"] = False
 
         await interaction.followup.send("Alerts disabled!", ephemeral=True)
 
@@ -718,25 +746,19 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
 
-            settings.set("alerts_channel_id", alerts_channel.id)
-            storage_object.set(settings)
+            settings_data["alerts_channel_id"] = alerts_channel.id
 
         await interaction.followup.send(
             f"Alerts channel changed to {alerts_channel.mention}!", ephemeral=True
@@ -756,25 +778,19 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
 
-            settings.set("mod_role_id", mod_role.id)
-            storage_object.set(settings)
+            settings_data["mod_role_id"] = mod_role.id
 
         await interaction.followup.send(
             f"Mod role changed to {mod_role.mention}!", ephemeral=True
@@ -789,25 +805,19 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
 
-            settings.set("alert_emoji_str", str(alert_emoji))
-            storage_object.set(settings)
+            settings_data["alert_emoji_str"] = str(alert_emoji)
 
         await interaction.followup.send(
             f"Alert emoji changed to {str(alert_emoji)}!", ephemeral=True
@@ -827,25 +837,19 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
 
-            settings.set("alert_threshold", alert_threshold)
-            storage_object.set(settings)
+            settings_data["alert_threshold"] = alert_threshold
 
         await interaction.followup.send(
             f"Alert threshold changed to ``{alert_threshold}``!", ephemeral=True
@@ -858,26 +862,27 @@ class AlertsCog(commands.GroupCog, name="alerts"):
     @alerts_ignore_group.command(name="list", description="List ignored channels.")
     async def alerts_ignore_list(self, interaction: discord.Interaction):
         guild = interaction.guild
-        storage_object = safe_read(COG, guild, "settings")
+        settings_data = safe_read(COG, guild, "settings")
 
-        if not (settings := storage_object.get()):
+        if not settings_data:
             await interaction.response.send_message(
                 "Alerts are not enabled!", ephemeral=True
             )
             return
-        if not isinstance(settings, AlertsCogSettingsObject):
-            await interaction.response.send_message(
-                "Alerts are not enabled!", ephemeral=True
-            )
-            return
-        if not settings.get("enabled"):
+        if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
             await interaction.response.send_message(
                 "Alerts are not enabled!", ephemeral=True
             )
             return
 
         ignored_channels = ", ".join(
-            [f"<#{channel_id}>" for channel_id in settings.get("ignored_channel_ids")]
+            [
+                f"<#{channel_id}>"
+                for channel_id in settings_data.get(
+                    "ignored_channel_ids",
+                    DEFAULT_ALERTS_COG_SETTINGS["ignored_channel_ids"],
+                )
+            ]
         )
 
         await interaction.response.send_message(
@@ -896,33 +901,27 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if channel.id in (
-                ignored_channel_ids := settings.get("ignored_channel_ids")
+            if channel.id in settings_data.get(
+                "ignored_channel_ids",
+                DEFAULT_ALERTS_COG_SETTINGS["ignored_channel_ids"],
             ):
                 await interaction.followup.send(
                     f"{channel.mention} is already ignored!", ephemeral=True
                 )
                 return
 
-            ignored_channel_ids.append(channel.id)
-            settings.set("ignored_channel_ids", ignored_channel_ids)
-            storage_object.set(settings)
+            settings_data["ignored_channel_ids"].append(channel.id)
 
         await interaction.followup.send(
             f"Now ignoring {channel.mention}!", ephemeral=True
@@ -944,33 +943,29 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
             if not channel.id in (
-                ignored_channel_ids := settings.get("ignored_channel_ids")
+                settings_data.get(
+                    "ignored_channel_ids",
+                    DEFAULT_ALERTS_COG_SETTINGS["ignored_channel_ids"],
+                )
             ):
                 await interaction.followup.send(
                     f"{channel.mention} is not ignored!", ephemeral=True
                 )
                 return
 
-            ignored_channel_ids.remove(channel.id)
-            settings.set("ignored_channel_ids", ignored_channel_ids)
-            storage_object.set(settings)
+            settings_data["ignored_channel_ids"].remove(channel.id)
 
         await interaction.followup.send(
             f"No longer ignoring {channel.mention}!", ephemeral=True
@@ -986,29 +981,35 @@ class AlertsCog(commands.GroupCog, name="alerts"):
     )
     async def alerts_trust_list(self, interaction: discord.Interaction):
         guild = interaction.guild
-        storage_object = safe_read(COG, guild, "settings")
+        settings_data = safe_read(COG, guild, "settings")
 
-        if not (settings := storage_object.get()):
+        if not settings_data:
             await interaction.response.send_message(
                 "Alerts are not enabled!", ephemeral=True
             )
             return
-        if not isinstance(settings, AlertsCogSettingsObject):
-            await interaction.response.send_message(
-                "Alerts are not enabled!", ephemeral=True
-            )
-            return
-        if not settings.get("enabled"):
+        if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
             await interaction.response.send_message(
                 "Alerts are not enabled!", ephemeral=True
             )
             return
 
         trusted_members = ", ".join(
-            [f"<@{member_id}>" for member_id in settings.get("trusted_member_ids")]
+            [
+                f"<@{member_id}>"
+                for member_id in settings_data.get(
+                    "trusted_member_ids",
+                    DEFAULT_ALERTS_COG_SETTINGS["trusted_member_ids"],
+                )
+            ]
         )
         trusted_roles = ", ".join(
-            [f"<@&{role_id}>" for role_id in settings.get("trusted_role_ids")]
+            [
+                f"<@&{role_id}>"
+                for role_id in settings_data.get(
+                    "trusted_role_ids", DEFAULT_ALERTS_COG_SETTINGS["trusted_role_ids"]
+                )
+            ]
         )
 
         await interaction.response.send_message(
@@ -1027,31 +1028,29 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
+            if member.id in (
+                settings_data.get(
+                    "trusted_member_ids",
+                    DEFAULT_ALERTS_COG_SETTINGS["trusted_member_ids"],
                 )
-                return
-            if member.id in (trusted_member_ids := settings.get("trusted_member_ids")):
+            ):
                 await interaction.followup.send(
                     f"{member.mention} is already trusted!", ephemeral=True
                 )
                 return
 
-            trusted_member_ids.append(member.id)
-            settings.set("trusted_member_ids", trusted_member_ids)
-            storage_object.set(settings)
+            settings_data["trusted_member_ids"].append(member.id)
 
         await interaction.followup.send(
             f"{member.mention} is now trusted!", ephemeral=True
@@ -1066,31 +1065,28 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
+            if role.id in (
+                settings_data.get(
+                    "trusted_role_ids", DEFAULT_ALERTS_COG_SETTINGS["trusted_role_ids"]
                 )
-                return
-            if role.id in (trusted_role_ids := settings.get("trusted_role_ids")):
+            ):
                 await interaction.followup.send(
                     f"{role.mention} is already trusted!", ephemeral=True
                 )
                 return
 
-            trusted_role_ids.append(role.id)
-            settings.set("trusted_role_ids", trusted_role_ids)
-            storage_object.set(settings)
+            settings_data["trusted_role_ids"].append(role.id)
 
         await interaction.followup.send(
             f"{role.mention} is now trusted!", ephemeral=True
@@ -1112,33 +1108,29 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
-                )
-                return
-            if not settings.get("enabled"):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
             if not member.id in (
-                trusted_member_ids := settings.get("trusted_member_ids")
+                settings_data.get(
+                    "trusted_member_ids",
+                    DEFAULT_ALERTS_COG_SETTINGS["trusted_member_ids"],
+                )
             ):
                 await interaction.followup.send(
                     f"{member.mention} is not trusted!", ephemeral=True
                 )
                 return
 
-            trusted_member_ids.remove(member.id)
-            settings.set("trusted_member_ids", trusted_member_ids)
-            storage_object.set(settings)
+            settings_data["trusted_member_ids"].remove(member.id)
 
         await interaction.followup.send(
             f"{member.mention} is no longer trusted!", ephemeral=True
@@ -1155,31 +1147,28 @@ class AlertsCog(commands.GroupCog, name="alerts"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "settings") as storage_object:
-            if not (settings := storage_object.get()):
+        async with safe_edit(COG, guild, "settings") as settings_data:
+            if not settings_data:
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not isinstance(settings, AlertsCogSettingsObject):
+            if not settings_data.get("enabled", DEFAULT_ALERTS_COG_SETTINGS["enabled"]):
                 await interaction.followup.send(
                     "Alerts are not enabled!", ephemeral=True
                 )
                 return
-            if not settings.get("enabled"):
-                await interaction.followup.send(
-                    "Alerts are not enabled!", ephemeral=True
+            if not role.id in (
+                settings_data.get(
+                    "trusted_role_ids", DEFAULT_ALERTS_COG_SETTINGS["trusted_role_ids"]
                 )
-                return
-            if not role.id in (trusted_role_ids := settings.get("trusted_role_ids")):
+            ):
                 await interaction.followup.send(
                     f"{role.mention} is not trusted!", ephemeral=True
                 )
                 return
 
-            trusted_role_ids.remove(role.id)
-            settings.set("trusted_role_ids", trusted_role_ids)
-            storage_object.set(settings)
+            settings_data["trusted_role_ids"].remove(role.id)
 
         await interaction.followup.send(
             f"{role.mention} is no longer trusted!", ephemeral=True
