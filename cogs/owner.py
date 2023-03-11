@@ -57,6 +57,21 @@ class OwnerCog(commands.GroupCog, name="owner"):
             )
             log.exception(traceback.format_exc())
 
+    @owner_load.autocomplete("cog")
+    async def owner_load_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ):
+        cogs = [
+            cog.replace(".py", "")
+            for cog in os.listdir("./cogs")
+            if cog.endswith(".py")
+        ]
+        return [
+            app_commands.Choice(name=cog, value=cog)
+            for cog in cogs
+            if current.lower() in cog.lower()
+        ]
+
     @app_commands.command(name="unload", description="Unload a cog.")
     @app_commands.describe(cog="Cog to unload")
     async def owner_unload(self, interaction: discord.Interaction, cog: str):
@@ -74,6 +89,21 @@ class OwnerCog(commands.GroupCog, name="owner"):
             await interaction.response.send_message(
                 f"``{cog}`` not loaded!", ephemeral=True
             )
+
+    @owner_unload.autocomplete("cog")
+    async def owner_unload_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ):
+        cogs = [
+            cog.replace(".py", "")
+            for cog in os.listdir("./cogs")
+            if cog.endswith(".py")
+        ]
+        return [
+            app_commands.Choice(name=cog, value=cog)
+            for cog in cogs
+            if current.lower() in cog.lower()
+        ]
 
     @app_commands.command(name="reload", description="Reload a cog.")
     @app_commands.describe(cog="Cog to reload")
@@ -101,6 +131,21 @@ class OwnerCog(commands.GroupCog, name="owner"):
                 f"``{cog}`` failed to load!\n\n```{e}```", ephemeral=True
             )
             log.exception(traceback.format_exc())
+
+    @owner_reload.autocomplete("cog")
+    async def owner_reload_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ):
+        cogs = [
+            cog.replace(".py", "")
+            for cog in os.listdir("./cogs")
+            if cog.endswith(".py")
+        ]
+        return [
+            app_commands.Choice(name=cog, value=cog)
+            for cog in cogs
+            if current.lower() in cog.lower()
+        ]
 
     @app_commands.command(name="reloadall", description="Reloads all cogs.")
     async def owner_reloadall(self, interaction: discord.Interaction):
