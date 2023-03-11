@@ -119,7 +119,7 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
             link_hash = await get_link_hash(link, "image")
             temp_url_to_link_hash_cache_data["cache"][link] = link_hash
         else:
-            link_hash = link_hash_data
+            link_hash = LinkHash.from_dict(link_hash_data)
 
         image_link_hashes.append(link_hash)
     for link in media_sorted_links.video_links:
@@ -131,7 +131,7 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
             link_hash = await get_link_hash(link, "video")
             temp_url_to_link_hash_cache_data["cache"][link] = link_hash
         else:
-            link_hash = link_hash_data
+            link_hash = LinkHash.from_dict(link_hash_data)
 
         video_link_hashes.append(link_hash)
     for link in media_sorted_links.audio_links:
@@ -143,7 +143,7 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
             link_hash = await get_link_hash(link, "audio")
             temp_url_to_link_hash_cache_data["cache"][link] = link_hash
         else:
-            link_hash = link_hash_data
+            link_hash = LinkHash.from_dict(link_hash_data)
 
         audio_link_hashes.append(link_hash)
     for link in media_sorted_links.other_links:
@@ -177,7 +177,11 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
 
             for url, link_hash in temp_url_to_link_hash_cache_data["cache"].items():
                 if not url_to_link_hash_cache_data["cache"].get(url):
-                    url_to_link_hash_cache_data["cache"][url] = link_hash
+                    url_to_link_hash_cache_data["cache"][url] = link_hash.__dict__
+
+            for url, link_hash in url_to_link_hash_cache_data["cache"].items():
+                if isinstance(link_hash, LinkHash):
+                    url_to_link_hash_cache_data["cache"][url] = link_hash.__dict__
 
     return MediaSortedLinkHashes(
         image_link_hashes, video_link_hashes, audio_link_hashes, other_link_hashes
