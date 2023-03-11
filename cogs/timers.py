@@ -200,7 +200,7 @@ class TimersCog(commands.GroupCog, name="timer"):
 
                         await last_message.delete()
                     except Exception:
-                        log.error(traceback.format_exc())
+                        log.exception(traceback.format_exc())
                         continue
 
     @discord.app_commands.command(
