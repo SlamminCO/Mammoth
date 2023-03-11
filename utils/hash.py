@@ -39,22 +39,6 @@ class MediaSortedLinkHashes:
     other_link_hashes: list[LinkHash]
 
 
-# class URLToLinkHashCache:
-#     def __init__(self):
-#         self.url_to_link_hash_cache = {}
-
-#     def get(self, url: str) -> Optional[LinkHash]:
-#         return self.url_to_link_hash_cache.get(url)
-
-#     def set(self, url: str, link_hash: LinkHash):
-#         self.url_to_link_hash_cache[url] = link_hash
-
-#     def all(self) -> list[Tuple[str, LinkHash]]:
-#         return zip(
-#             self.url_to_link_hash_cache.keys(), self.url_to_link_hash_cache.values()
-#         )
-
-
 async def get_link_hash(
     link: str, media_type: str = None or "image" or "video" or "audio"
 ):

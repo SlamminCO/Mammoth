@@ -26,24 +26,6 @@ with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
 
 
-class ReflectCogSettingsObject:
-    def __init__(self):
-        self.settings = DEFAULT_REFLECT_COG_SETTINGS.copy()
-
-    def update(self):
-        for key in DEFAULT_REFLECT_COG_SETTINGS:
-            if key not in self.settings:
-                self.settings[key] = DEFAULT_REFLECT_COG_SETTINGS[key]
-
-    def get(self, key: str):
-        self.update()
-
-        return self.settings.get(key)
-
-    def set(self, key: str, value):
-        self.settings[key] = value
-
-
 class ReflectionDismissButton(Button):
     def __init__(
         self, message: discord.Message, appended_messages: list[discord.Message]

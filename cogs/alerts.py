@@ -31,24 +31,6 @@ with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
 
 
-class AlertsCogSettingsObject:
-    def __init__(self):
-        self.settings = DEFAULT_ALERTS_COG_SETTINGS.copy()
-
-    def update(self):
-        for key in DEFAULT_ALERTS_COG_SETTINGS:
-            if key not in self.settings:
-                self.settings[key] = DEFAULT_ALERTS_COG_SETTINGS[key]
-
-    def get(self, key: str):
-        self.update()
-
-        return self.settings.get(key)
-
-    def set(self, key: str, value):
-        self.settings[key] = value
-
-
 class CompactImageAlertPart:
     def __init__(
         self,
