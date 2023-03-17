@@ -2,8 +2,7 @@ from dataclasses import dataclass
 from typing import Optional, Tuple
 from utils.link import get_media_sorted_links_from_message, MediaSortedLinks
 from PIL import Image
-from utils.storage import safe_read, safe_edit
-from utils.debug import DebugPrinter
+from utils.storage import safe_read, safe_edit, update_dict_defaults
 import imagehash
 import discord
 import aiohttp
@@ -13,12 +12,11 @@ import io
 import json
 
 
+DEFAULT_URL_TO_LINK_HASH_CACHE = {"cache": {}}
+
+
 with open("./settings.json", "r") as r:
     SETTINGS = json.load(r)
-
-
-debug_printer = DebugPrinter(__name__, SETTINGS["debugPrinting"])
-dprint = debug_printer.dprint
 
 
 @dataclass(frozen=True)
@@ -28,6 +26,10 @@ class LinkHash:
     image_hash: Optional[str]
     media_type: str = None or "image" or "video" or "audio"
 
+    @classmethod
+    def from_dict(cls, data: dict):
+        return cls(**data)
+
 
 @dataclass(frozen=True)
 class MediaSortedLinkHashes:
@@ -35,22 +37,6 @@ class MediaSortedLinkHashes:
     video_link_hashes: list[LinkHash]
     audio_link_hashes: list[LinkHash]
     other_link_hashes: list[LinkHash]
-
-
-class URLToLinkHashCache:
-    def __init__(self):
-        self.url_to_link_hash_cache = {}
-
-    def get(self, url: str) -> Optional[LinkHash]:
-        return self.url_to_link_hash_cache.get(url)
-
-    def set(self, url: str, link_hash: LinkHash):
-        self.url_to_link_hash_cache[url] = link_hash
-
-    def all(self) -> list[Tuple[str, LinkHash]]:
-        return zip(
-            self.url_to_link_hash_cache.keys(), self.url_to_link_hash_cache.values()
-        )
 
 
 async def get_link_hash(
@@ -97,44 +83,53 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
     tasks = []
 
     if SETTINGS["caching"]:
-        temp_storage_object = safe_read("global", guild, "url_to_link_hash_cache")
-        if not (temp_url_to_link_hash_cache := temp_storage_object.get()):
-            temp_url_to_link_hash_cache = URLToLinkHashCache()
-        if not isinstance(temp_url_to_link_hash_cache, URLToLinkHashCache):
-            temp_url_to_link_hash_cache = URLToLinkHashCache()
+        if not (
+            temp_url_to_link_hash_cache_data := safe_read(
+                "global", guild, "url_to_link_hash_cache"
+            )
+        ) or not temp_url_to_link_hash_cache_data.get(
+            "cache", DEFAULT_URL_TO_LINK_HASH_CACHE["cache"]
+        ):
+            temp_url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE.copy()
     else:
-        temp_url_to_link_hash_cache = URLToLinkHashCache()
+        temp_url_to_link_hash_cache_data = DEFAULT_URL_TO_LINK_HASH_CACHE.copy()
 
     for link in media_sorted_links.image_links:
-        if not (link_hash := temp_url_to_link_hash_cache.get(link)):
+        if not (link_hash_data := temp_url_to_link_hash_cache_data["cache"].get(link)):
             if SETTINGS["asyncio_gather"]:
                 tasks.append(get_link_hash(link, "image"))
                 continue
 
             link_hash = await get_link_hash(link, "image")
-            temp_url_to_link_hash_cache.set(link, link_hash)
+            temp_url_to_link_hash_cache_data["cache"][link] = link_hash
+        else:
+            link_hash = LinkHash.from_dict(link_hash_data)
 
         image_link_hashes.append(link_hash)
     for link in media_sorted_links.video_links:
-        if not (link_hash := temp_url_to_link_hash_cache.get(link)):
+        if not (link_hash_data := temp_url_to_link_hash_cache_data["cache"].get(link)):
             if SETTINGS["asyncio_gather"]:
                 tasks.append(get_link_hash(link, "video"))
                 continue
 
             link_hash = await get_link_hash(link, "video")
-            temp_url_to_link_hash_cache.set(link, link_hash)
+            temp_url_to_link_hash_cache_data["cache"][link] = link_hash
+        else:
+            link_hash = LinkHash.from_dict(link_hash_data)
 
-        image_link_hashes.append(link_hash)
+        video_link_hashes.append(link_hash)
     for link in media_sorted_links.audio_links:
-        if not (link_hash := temp_url_to_link_hash_cache.get(link)):
+        if not (link_hash_data := temp_url_to_link_hash_cache_data["cache"].get(link)):
             if SETTINGS["asyncio_gather"]:
                 tasks.append(get_link_hash(link, "audio"))
                 continue
 
             link_hash = await get_link_hash(link, "audio")
-            temp_url_to_link_hash_cache.set(link, link_hash)
+            temp_url_to_link_hash_cache_data["cache"][link] = link_hash
+        else:
+            link_hash = LinkHash.from_dict(link_hash_data)
 
-        image_link_hashes.append(link_hash)
+        audio_link_hashes.append(link_hash)
     for link in media_sorted_links.other_links:
         other_link_hashes.append(LinkHash(link, None, None, None))
 
@@ -142,7 +137,7 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
         results = await asyncio.gather(*tasks)
 
         for result in results:
-            temp_url_to_link_hash_cache.set(result.link, result)
+            temp_url_to_link_hash_cache_data["cache"][result.link] = result
 
             if result.media_type == "image":
                 image_link_hashes.append(result)
@@ -156,19 +151,21 @@ async def get_media_sorted_link_hashes_from_media_sorted_links(
     if SETTINGS["caching"]:
         async with safe_edit(
             "global", guild, "url_to_link_hash_cache"
-        ) as storage_object:
-            if not (url_to_link_hash_cache := storage_object.get()):
-                url_to_link_hash_cache = URLToLinkHashCache()
-            if not isinstance(url_to_link_hash_cache, URLToLinkHashCache):
-                url_to_link_hash_cache = URLToLinkHashCache()
+        ) as url_to_link_hash_cache_data:
+            if not url_to_link_hash_cache_data or not url_to_link_hash_cache_data.get(
+                "cache", DEFAULT_URL_TO_LINK_HASH_CACHE["cache"]
+            ):
+                update_dict_defaults(
+                    DEFAULT_URL_TO_LINK_HASH_CACHE, url_to_link_hash_cache_data
+                )
 
-            for url_link_hash_pair in temp_url_to_link_hash_cache.all():
-                url, link_hash = url_link_hash_pair
+            for url, link_hash in temp_url_to_link_hash_cache_data["cache"].items():
+                if not url_to_link_hash_cache_data["cache"].get(url):
+                    url_to_link_hash_cache_data["cache"][url] = link_hash.__dict__
 
-                if not url_to_link_hash_cache.get(url):
-                    url_to_link_hash_cache.set(url, link_hash)
-
-            storage_object.set(url_to_link_hash_cache)
+            for url, link_hash in url_to_link_hash_cache_data["cache"].items():
+                if isinstance(link_hash, LinkHash):
+                    url_to_link_hash_cache_data["cache"][url] = link_hash.__dict__
 
     return MediaSortedLinkHashes(
         image_link_hashes, video_link_hashes, audio_link_hashes, other_link_hashes
