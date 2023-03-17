@@ -138,7 +138,9 @@ class EditTimerModal(discord.ui.Modal):
             if not timer_data:
                 update_dict_defaults(DEFAULT_TIMER_DATA, timer_data)
 
-            timer_data[self.original_name]["interval"] = int(self.interval_input.value) * 60
+            timer_data[self.original_name]["interval"] = (
+                int(self.interval_input.value) * 60
+            )
             timer_data[self.original_name]["message"] = self.message_input.value
             timer_data[self.name_input.value] = timer_data.pop(self.original_name)
 
@@ -172,7 +174,9 @@ class TimersCog(commands.GroupCog, name="timer"):
                     continue
 
                 for timer in timer_data:
-                    if not (channel := guild.get_channel(timer_data[timer]["channel_id"])):
+                    if not (
+                        channel := guild.get_channel(timer_data[timer]["channel_id"])
+                    ):
                         continue
                     if channel.last_message_id == timer_data[timer]["last_message_id"]:
                         continue
@@ -184,7 +188,9 @@ class TimersCog(commands.GroupCog, name="timer"):
                         continue
 
                     try:
-                        new_last_message = await channel.send(timer_data[timer]["message"])
+                        new_last_message = await channel.send(
+                            timer_data[timer]["message"]
+                        )
                         old_last_message_id = timer_data[timer]["last_message_id"]
                         timer_data[timer]["last_message_id"] = new_last_message.id
                         timer_data[timer]["last_run"] = time.time()

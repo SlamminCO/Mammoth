@@ -14,9 +14,7 @@ COG = __name__
 ONE_HOUR = 3600
 DEFAULT_TRAP_ROLE_SETTINGS = {}
 DEFAULT_AUTO_PURGE_SETTINGS = {}
-DEFAULT_AUTO_PRUNE_SETTINGS = {
-    "no_roles": False
-}
+DEFAULT_AUTO_PRUNE_SETTINGS = {"no_roles": False}
 
 log = logging.getLogger(COG)
 

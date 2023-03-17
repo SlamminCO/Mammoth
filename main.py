@@ -71,7 +71,7 @@ class Mammoth(Bot):
 
     async def setup_hook(self):
         migrate_storage()
-        
+
         await self.load_cogs()
 
     async def load_cogs(self):
