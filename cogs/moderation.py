@@ -101,7 +101,7 @@ class ModerationCog(commands.GroupCog, name="mod"):
                     continue
 
                 for trapped_role_id in role_traps:
-                    if not (trapped_role := guild.get_role(trapped_role_id)):
+                    if not (trapped_role := guild.get_role(int(trapped_role_id))):
                         continue
 
                     for member in trapped_role.members:
@@ -221,7 +221,7 @@ class ModerationCog(commands.GroupCog, name="mod"):
             return
 
         await interaction.followup.send(
-            f"**Trapped Roles**\n {', '.join(interaction.guild.get_role(role_id).mention for role_id in role_traps)}"
+            f"**Trapped Roles**\n {', '.join(interaction.guild.get_role(int(role_id)).mention for role_id in role_traps)}"
         )
 
     @mod_trap_role_group.command(
