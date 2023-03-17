@@ -97,17 +97,17 @@ class ModerationCog(commands.GroupCog, name="mod"):
     async def run_role_traps(self):
         for guild in self.bot.guilds:
             try:
-                if not (role_traps := safe_read(COG, guild, "role_traps")):
+                if not (role_traps_data := safe_read(COG, guild, "role_traps")):
                     continue
 
-                for trapped_role_id in role_traps:
+                for trapped_role_id in role_traps_data:
                     if not (trapped_role := guild.get_role(int(trapped_role_id))):
                         continue
 
                     for member in trapped_role.members:
                         try:
                             await member.ban(
-                                reason=role_traps[trapped_role_id]["ban_reason"]
+                                reason=role_traps_data[trapped_role_id]["ban_reason"]
                             )
                         except Exception:
                             log.exception(traceback.format_exc())
@@ -118,10 +118,10 @@ class ModerationCog(commands.GroupCog, name="mod"):
     async def run_auto_purges(self):
         for guild in self.bot.guilds:
             try:
-                if not (auto_purge := safe_read(COG, guild, "auto_purge")):
+                if not (auto_purge_data := safe_read(COG, guild, "auto_purge")):
                     continue
 
-                for channel_id in auto_purge:
+                for channel_id in auto_purge_data:
                     channel = guild.get_channel(int(channel_id))
 
                     if not channel:
@@ -132,7 +132,7 @@ class ModerationCog(commands.GroupCog, name="mod"):
                             if message.created_at < (
                                 datetime.datetime.now(tz=datetime.timezone.utc)
                                 - datetime.timedelta(
-                                    days=auto_purge[channel_id]["lifetime"]
+                                    days=auto_purge_data[channel_id]["lifetime"]
                                 )
                             ):
                                 await message.delete()
@@ -145,10 +145,10 @@ class ModerationCog(commands.GroupCog, name="mod"):
     async def run_auto_prunes(self):
         for guild in self.bot.guilds:
             try:
-                if not (auto_prune := safe_read(COG, guild, "auto_prune")):
+                if not (auto_prune_data := safe_read(COG, guild, "auto_prune")):
                     continue
 
-                if auto_prune["no_roles"]:
+                if auto_prune_data["no_roles"]:
                     members_to_prune = [
                         member
                         for member in guild.members
@@ -178,13 +178,13 @@ class ModerationCog(commands.GroupCog, name="mod"):
             return
         if not (guild := after.guild):
             return
-        if not (role_traps := safe_read(COG, guild, "role_traps")):
+        if not (role_traps_data := safe_read(COG, guild, "role_traps")):
             return
 
         for role in after.roles:
-            if role.id in role_traps:
+            if str(role.id) in role_traps_data:
                 try:
-                    await after.ban(reason=role_traps[role.id]["ban_reason"])
+                    await after.ban(reason=role_traps_data[str(role.id)]["ban_reason"])
                 except Exception:
                     log.exception(traceback.format_exc())
 
@@ -201,14 +201,14 @@ class ModerationCog(commands.GroupCog, name="mod"):
     ):
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, interaction.guild, "role_traps") as role_traps:
-            if not role_traps:
-                update_dict_defaults(DEFAULT_TRAP_ROLE_SETTINGS, role_traps)
-            if role.id in role_traps:
+        async with safe_edit(COG, interaction.guild, "role_traps") as role_traps_data:
+            if not role_traps_data:
+                update_dict_defaults(DEFAULT_TRAP_ROLE_SETTINGS, role_traps_data)
+            if role.id in role_traps_data:
                 await interaction.followup.send("Role is already trapped!")
                 return
 
-            role_traps[role.id] = {"ban_reason": ban_reason}
+            role_traps_data[role.id] = {"ban_reason": ban_reason}
 
         await interaction.followup.send(f"{role.mention} is now trapped!")
 
@@ -216,12 +216,12 @@ class ModerationCog(commands.GroupCog, name="mod"):
     async def mod_trap_role_list(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        if not (role_traps := safe_read(COG, interaction.guild, "role_traps")):
+        if not (role_traps_data := safe_read(COG, interaction.guild, "role_traps")):
             await interaction.followup.send("No roles are trapped!")
             return
 
         await interaction.followup.send(
-            f"**Trapped Roles**\n {', '.join(interaction.guild.get_role(int(role_id)).mention for role_id in role_traps)}"
+            f"**Trapped Roles**\n {', '.join(interaction.guild.get_role(int(role_id)).mention for role_id in role_traps_data)}"
         )
 
     @mod_trap_role_group.command(
@@ -232,14 +232,14 @@ class ModerationCog(commands.GroupCog, name="mod"):
     ):
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, interaction.guild, "role_traps") as role_traps:
-            if not role_traps:
-                update_dict_defaults(DEFAULT_TRAP_ROLE_SETTINGS, role_traps)
-            if role.id not in role_traps:
+        async with safe_edit(COG, interaction.guild, "role_traps") as role_traps_data:
+            if not role_traps_data:
+                update_dict_defaults(DEFAULT_TRAP_ROLE_SETTINGS, role_traps_data)
+            if role.id not in role_traps_data:
                 await interaction.followup.send("Role is not trapped!")
                 return
 
-            del role_traps[role.id]
+            del role_traps_data[role.id]
 
         await interaction.followup.send(f"{role.mention} is no longer trapped!")
 
@@ -266,16 +266,16 @@ class ModerationCog(commands.GroupCog, name="mod"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, interaction.guild, "auto_purge") as auto_purge:
-            if not auto_purge:
-                update_dict_defaults(DEFAULT_AUTO_PURGE_SETTINGS, auto_purge)
-            if str(channel.id) in auto_purge:
+        async with safe_edit(COG, interaction.guild, "auto_purge") as auto_purge_data:
+            if not auto_purge_data:
+                update_dict_defaults(DEFAULT_AUTO_PURGE_SETTINGS, auto_purge_data)
+            if str(channel.id) in auto_purge_data:
                 await interaction.followup.send(
                     f"Automatic message purging is already enabled in {channel.mention}!"
                 )
                 return
 
-            auto_purge[str(channel.id)] = {"lifetime": lifetime}
+            auto_purge_data[str(channel.id)] = {"lifetime": lifetime}
 
         await interaction.followup.send(f"Auto purge enabled for {channel.mention}!")
 
@@ -288,16 +288,16 @@ class ModerationCog(commands.GroupCog, name="mod"):
     ):
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, interaction.guild, "auto_purge") as auto_purge:
-            if not auto_purge:
-                update_dict_defaults(DEFAULT_AUTO_PURGE_SETTINGS, auto_purge)
-            if str(channel.id) not in auto_purge:
+        async with safe_edit(COG, interaction.guild, "auto_purge") as auto_purge_data:
+            if not auto_purge_data:
+                update_dict_defaults(DEFAULT_AUTO_PURGE_SETTINGS, auto_purge_data)
+            if str(channel.id) not in auto_purge_data:
                 await interaction.followup.send(
                     f"Automatic message purging is not enabled in {channel.mention}!"
                 )
                 return
 
-            del auto_purge[str(channel.id)]
+            del auto_purge_data[str(channel.id)]
 
         await interaction.followup.send(f"Auto purge disabled for {channel.mention}!")
 
@@ -351,11 +351,11 @@ class ModerationCog(commands.GroupCog, name="mod"):
 
         await interaction.response.defer(thinking=True, ephemeral=True)
 
-        async with safe_edit(COG, guild, "auto_prune") as auto_prune:
-            if not auto_prune:
-                auto_prune = DEFAULT_AUTO_PRUNE_SETTINGS
+        async with safe_edit(COG, guild, "auto_prune") as auto_prune_data:
+            if not auto_prune_data:
+                update_dict_defaults(DEFAULT_AUTO_PURGE_SETTINGS, auto_prune_data)
 
-            auto_prune["no_roles"] = state
+            auto_prune_data["no_roles"] = state
 
         await interaction.followup.send(
             f"Auto pruning of members without roles has been set to {state}"
