@@ -18,7 +18,6 @@ with open("./settings.json", "r") as r:
 
 
 @discord.app_commands.guild_only()
-@discord.app_commands.checks.has_permissions(manage_messages=True)
 class BlacklistCog(commands.GroupCog, name="blacklist"):
     def __init__(self, bot: Mammoth):
         self.bot = bot
@@ -70,6 +69,8 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
                 except discord.HTTPException:
                     return
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @discord.app_commands.command(name="list", description="List blacklisted hashes.")
     async def blacklist_list(self, interaction: discord.Interaction):
         guild = interaction.guild
@@ -90,6 +91,8 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
             ephemeral=True,
         )
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="add", description="Add a hash to the blacklist."
     )
@@ -118,6 +121,8 @@ class BlacklistCog(commands.GroupCog, name="blacklist"):
 
         await interaction.followup.send(f"``{hash}`` blacklisted!", ephemeral=True)
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="remove", description="Remove a hash from the blacklist."
     )

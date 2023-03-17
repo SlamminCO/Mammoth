@@ -151,7 +151,6 @@ class EditTimerModal(discord.ui.Modal):
 
 
 @discord.app_commands.guild_only()
-@discord.app_commands.checks.has_permissions(manage_messages=True)
 class TimersCog(commands.GroupCog, name="timer"):
     def __init__(self, bot: Mammoth):
         self.bot = bot
@@ -209,6 +208,8 @@ class TimersCog(commands.GroupCog, name="timer"):
                         log.exception(traceback.format_exc())
                         continue
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="new",
         description="Create a new message timer.",
@@ -216,6 +217,8 @@ class TimersCog(commands.GroupCog, name="timer"):
     async def timer_new(self, interaction: discord.Interaction):
         await interaction.response.send_modal(NewTimerModal())
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="edit", description="Edit an existing message timer."
     )
@@ -230,6 +233,8 @@ class TimersCog(commands.GroupCog, name="timer"):
 
         await interaction.response.send_modal(EditTimerModal(guild, name))
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @timer_edit.autocomplete("name")
     async def timer_edit_name_autocomplete(
         self, interaction: discord.Interaction, current: str
@@ -243,6 +248,8 @@ class TimersCog(commands.GroupCog, name="timer"):
             if current.lower() in name.lower()
         ]
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @discord.app_commands.command(name="delete", description="Delete a message timer.")
     @discord.app_commands.describe(
         name="Name of the timer to delete.",
@@ -277,6 +284,8 @@ class TimersCog(commands.GroupCog, name="timer"):
             if current.lower() in name.lower()
         ]
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @discord.app_commands.command(name="list", description="List all message timers.")
     async def timer_list(self, interaction: discord.Interaction):
         guild = interaction.guild

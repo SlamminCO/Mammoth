@@ -204,7 +204,6 @@ class CompactImageReflectionView(View):
 
 
 @discord.app_commands.guild_only()
-@discord.app_commands.checks.has_permissions(manage_messages=True)
 class ReflectCog(commands.GroupCog, name="reflect"):
     def __init__(self, bot: Mammoth):
         self.bot = bot
@@ -464,6 +463,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         return parent_reflection
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="enable", description="Enables media reflecting."
     )
@@ -489,6 +490,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.followup.send("Reflect enabled!", ephemeral=True)
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="disable", description="Disable media reflecting."
     )
@@ -505,6 +508,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
 
         await interaction.followup.send("Reflect disabled!", ephemeral=True)
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @discord.app_commands.command(
         name="channel", description="Change where to send media reflections."
     )
@@ -531,6 +536,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         description="Exclude members, channels and roles from reflection.",
     )
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @reflect_ignore_group.command(
         name="list", description="List ignored members, channels and roles."
     )
@@ -580,6 +587,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             ephemeral=True,
         )
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @reflect_ignore_group.command(
         name="member", description="Exclude a member from reflection."
     )
@@ -608,6 +617,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             f"Now ignoring {member.mention}!", ephemeral=True
         )
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @reflect_ignore_group.command(
         name="channel", description="Exclude a channel from reflection."
     )
@@ -637,6 +648,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             f"Now ignoring {channel.mention}!", ephemeral=True
         )
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @reflect_ignore_group.command(
         name="role", description="Exclude a role from reflection."
     )
@@ -668,6 +681,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
         description="Stop excluding members, channels and roles from reflection.",
     )
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @reflect_unignore_group.command(
         name="member", description="Stop excluding a member from reflection."
     )
@@ -696,6 +711,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             f"No longer ignoring {member.mention}!", ephemeral=True
         )
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @reflect_unignore_group.command(
         name="channel", description="Stop excluding a channel from reflection."
     )
@@ -725,6 +742,8 @@ class ReflectCog(commands.GroupCog, name="reflect"):
             f"No longer ignoring {channel.mention}!", ephemeral=True
         )
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @reflect_unignore_group.command(
         name="role", description="Stop excluding a role from reflection."
     )

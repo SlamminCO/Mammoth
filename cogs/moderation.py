@@ -75,7 +75,6 @@ class PruneView(discord.ui.View):
 
 
 @discord.app_commands.guild_only()
-@discord.app_commands.checks.has_permissions(kick_members=True, manage_roles=True)
 class ModerationCog(commands.GroupCog, name="mod"):
     def __init__(self, bot: Mammoth):
         self.bot = bot
@@ -192,6 +191,8 @@ class ModerationCog(commands.GroupCog, name="mod"):
         name="traprole", description="Manage trapped roles."
     )
 
+    @discord.app_commands.checks.has_permissions(ban_members=True)
+    @discord.app_commands.checks.bot_has_permissions(ban_members=True)
     @mod_trap_role_group.command(name="add", description="Add a role to be trapped.")
     async def mod_trap_role_add(
         self,
@@ -212,6 +213,8 @@ class ModerationCog(commands.GroupCog, name="mod"):
 
         await interaction.followup.send(f"{role.mention} is now trapped!")
 
+    @discord.app_commands.checks.has_permissions(ban_members=True)
+    @discord.app_commands.checks.bot_has_permissions(ban_members=True)
     @mod_trap_role_group.command(name="list", description="List trapped roles.")
     async def mod_trap_role_list(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True, ephemeral=True)
@@ -224,6 +227,8 @@ class ModerationCog(commands.GroupCog, name="mod"):
             f"**Trapped Roles**\n {', '.join(interaction.guild.get_role(int(role_id)).mention for role_id in role_traps_data)}"
         )
 
+    @discord.app_commands.checks.has_permissions(ban_members=True)
+    @discord.app_commands.checks.bot_has_permissions(ban_members=True)
     @mod_trap_role_group.command(
         name="remove", description="Remove a role from being trapped."
     )
@@ -247,6 +252,8 @@ class ModerationCog(commands.GroupCog, name="mod"):
         name="autopurge", description="Manage automatic message purging."
     )
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @mod_autopurge_group.command(
         name="enable", description="Enable automatic message purging in a channel."
     )
@@ -279,6 +286,8 @@ class ModerationCog(commands.GroupCog, name="mod"):
 
         await interaction.followup.send(f"Auto purge enabled for {channel.mention}!")
 
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
     @mod_autopurge_group.command(
         name="disable", description="Disable automatic message purging in a channel."
     )
@@ -305,6 +314,8 @@ class ModerationCog(commands.GroupCog, name="mod"):
         name="role", description="Manage members roles."
     )
 
+    @discord.app_commands.checks.has_permissions(manage_roles=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_roles=True)
     @mod_role_group.command(name="addall", description="Add a role to all members.")
     async def mod_role_addall(
         self, interaction: discord.Interaction, role: discord.Role
@@ -331,15 +342,13 @@ class ModerationCog(commands.GroupCog, name="mod"):
             embed=embed,
         )
 
-    mod_prune_group = discord.app_commands.Group(
-        name="prune", description="Prune members from the server."
-    )
-
     mod_autoprune_group = discord.app_commands.Group(
         name="autoprune",
         description="Enable and disable auto pruning of members from the server.",
     )
 
+    @discord.app_commands.checks.has_permissions(kick_members=True)
+    @discord.app_commands.checks.bot_has_permissions(kick_members=True)
     @mod_autoprune_group.command(
         name="noroles",
         description="Enable or disable auto pruning of members without roles.",
@@ -361,6 +370,12 @@ class ModerationCog(commands.GroupCog, name="mod"):
             f"Auto pruning of members without roles has been set to {state}"
         )
 
+    mod_prune_group = discord.app_commands.Group(
+        name="prune", description="Prune members from the server."
+    )
+
+    @discord.app_commands.checks.has_permissions(kick_members=True)
+    @discord.app_commands.checks.bot_has_permissions(kick_members=True)
     @mod_prune_group.command(
         name="noroles",
         description="Prune all members from the server that have no role.",
