@@ -133,8 +133,9 @@ def update_dict_defaults(defaults: dict, data_dict: dict):
             data_dict[key] = value
 
 
-def safe_read(scope: str, guild: discord.Guild, key: str) -> dict:
-    base_path = f"{DATA_PATH}/{scope}/{guild.id}"
+def safe_read(scope: str, identifier: discord.Guild | int, key: str) -> dict:
+    guild_id = identifier.id if isinstance(identifier, discord.Guild) else identifier
+    base_path = f"{DATA_PATH}/{scope}/{guild_id}"
     file_path = f"{base_path}/{key}.json"
 
     log.debug(f"Read-only request for [{file_path}]")
@@ -161,8 +162,9 @@ def safe_read(scope: str, guild: discord.Guild, key: str) -> dict:
 
 
 @asynccontextmanager
-async def safe_edit(scope: str, guild: discord.Guild, key: str) -> dict:
-    base_path = f"{DATA_PATH}/{scope}/{guild.id}"
+async def safe_edit(scope: str, identifier: discord.Guild | int, key: str) -> dict:
+    guild_id = identifier.id if isinstance(identifier, discord.Guild) else identifier
+    base_path = f"{DATA_PATH}/{scope}/{guild_id}"
     file_path = f"{base_path}/{key}.json"
 
     log.debug(f"Edit request opened for [{file_path}]")
