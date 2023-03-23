@@ -2,18 +2,26 @@ from typing import Optional
 from discord.ext import commands, tasks
 from main import Mammoth
 from utils.storage import safe_edit, safe_read, update_dict_defaults
+from utils.link import get_links_from_string
 import discord
 import json
 import asyncio
 import traceback
 import datetime
 import logging
+import typing
 
 
 COG = __name__
 ONE_HOUR = 3600
 DEFAULT_TRAP_ROLE_SETTINGS = {}
 DEFAULT_AUTO_PURGE_SETTINGS = {}
+DEFAULT_LINK_FILTER_SETTINGS = {}
+DEFAULT_LINK_FILTER_CHANNEL_SETTINGS = {
+    "enabled": False,
+    "linklist": [],
+    "mode": "whitelist",
+}
 DEFAULT_AUTO_PRUNE_SETTINGS = {"no_roles": False}
 
 log = logging.getLogger(COG)
@@ -72,6 +80,124 @@ class PruneView(discord.ui.View):
         )
         await asyncio.sleep(3)
         await self.root_interaction.delete_original_response()
+
+
+class EditLinkFilterView(discord.ui.View):
+    def __init__(
+        self, root_interaction: discord.Interaction, channel: discord.TextChannel
+    ):
+        super().__init__(timeout=None)
+
+        self.root_interaction = root_interaction
+        self.channel = channel
+
+    @discord.ui.button(label="Toggle State", style=discord.ButtonStyle.gray)
+    async def toggle_state_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await interaction.response.defer()
+
+        async with safe_edit(
+            COG, interaction.guild, "link_filters"
+        ) as link_filter_data:
+            if not link_filter_data:
+                update_dict_defaults(DEFAULT_LINK_FILTER_SETTINGS, link_filter_data)
+            if not link_filter_data.get(str(self.channel.id)):
+                link_filter_data[str(self.channel.id)] = {}
+                update_dict_defaults(
+                    DEFAULT_LINK_FILTER_CHANNEL_SETTINGS,
+                    link_filter_data[str(self.channel.id)],
+                )
+
+            link_filter_data[str(self.channel.id)]["enabled"] = not link_filter_data[
+                str(self.channel.id)
+            ]["enabled"]
+
+        embed = discord.Embed()
+        embed.description = f"> Channel: {self.channel.mention}\n> Enabled: ``{link_filter_data[str(self.channel.id)]['enabled']}``\n> Mode: ``{link_filter_data[str(self.channel.id)]['mode']}``\n\n**Link List**:\n```{', '.join(link for link in link_filter_data[str(self.channel.id)]['linklist'])}```"
+
+        await self.root_interaction.edit_original_response(embed=embed)
+
+    @discord.ui.button(label="Toggle Mode", style=discord.ButtonStyle.gray)
+    async def toggle_mode_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await interaction.response.defer()
+
+        async with safe_edit(
+            COG, interaction.guild, "link_filters"
+        ) as link_filter_data:
+            if not link_filter_data:
+                update_dict_defaults(DEFAULT_LINK_FILTER_SETTINGS, link_filter_data)
+            if not link_filter_data.get(str(self.channel.id)):
+                link_filter_data[str(self.channel.id)] = {}
+                update_dict_defaults(
+                    DEFAULT_LINK_FILTER_CHANNEL_SETTINGS,
+                    link_filter_data[str(self.channel.id)],
+                )
+
+            link_filter_data[str(self.channel.id)]["mode"] = "whitelist" if link_filter_data[
+                str(self.channel.id)
+            ]["mode"] == "blacklist" else "blacklist"
+
+        embed = discord.Embed()
+        embed.description = f"> Channel: {self.channel.mention}\n> Enabled: ``{link_filter_data[str(self.channel.id)]['enabled']}``\n> Mode: ``{link_filter_data[str(self.channel.id)]['mode']}``\n\n**Link List**:\n```{', '.join(link for link in link_filter_data[str(self.channel.id)]['linklist'])}```"
+
+        await self.root_interaction.edit_original_response(embed=embed)
+
+    @discord.ui.button(label="Edit Links", style=discord.ButtonStyle.gray)
+    async def edit_links_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
+        await interaction.response.send_modal(EditLinksModal(self.root_interaction, self.channel))
+
+
+class EditLinksModal(discord.ui.Modal):
+    def __init__(self, root_interaction: discord.Interaction, channel: discord.TextChannel):
+        super().__init__(title="Edit Link Filter")
+
+        self.root_interaction = root_interaction
+        self.channel = channel
+
+        self.link_filter_data = safe_read(COG, self.channel.guild, "link_filters")
+
+        self.link_list_input = discord.ui.TextInput(
+            label="Link List (Comma Seperated)",
+            style=discord.TextStyle.paragraph,
+            required=True,
+            default=", ".join(
+                link
+                for link in self.link_filter_data.get(
+                    str(self.channel.id), DEFAULT_LINK_FILTER_CHANNEL_SETTINGS
+                )["linklist"]
+            ),
+        )
+
+        self.add_item(self.link_list_input)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        async with safe_edit(
+            COG, interaction.guild, "link_filters"
+        ) as link_filter_data:
+            if not link_filter_data:
+                update_dict_defaults(DEFAULT_LINK_FILTER_SETTINGS, link_filter_data)
+            if not link_filter_data.get(str(self.channel.id)):
+                link_filter_data[str(self.channel.id)] = {}
+                update_dict_defaults(
+                    DEFAULT_LINK_FILTER_CHANNEL_SETTINGS,
+                    link_filter_data[str(self.channel.id)],
+                )
+
+            link_filter_data[str(self.channel.id)][
+                "linklist"
+            ] = [f"{'https://' if not link.startswith(('http://', 'https://')) else ''}{link}" for link in self.link_list_input.value.replace(" ", "").split(",")]
+
+        embed = discord.Embed()
+        embed.description = f"> Channel: {self.channel.mention}\n> Enabled: ``{link_filter_data[str(self.channel.id)]['enabled']}``\n> Mode: ``{link_filter_data[str(self.channel.id)]['mode']}``\n\n**Link List**:\n```{', '.join(link for link in link_filter_data[str(self.channel.id)]['linklist'])}```"
+
+        await self.root_interaction.edit_original_response(embed=embed)
 
 
 @discord.app_commands.guild_only()
@@ -169,6 +295,40 @@ class ModerationCog(commands.GroupCog, name="mod"):
             except Exception:
                 log.error(traceback.format_exc())
 
+    @commands.Cog.listener(name="on_message")
+    async def handle_link_filters_on_message(self, message: discord.Message):
+        if not (guild := message.guild):
+            return
+        if not (link_filter_data := safe_read(COG, guild, "link_filters")):
+            return
+        if not link_filter_data.get(str(message.channel.id)):
+            return
+        if not link_filter_data[str(message.channel.id)].get("enabled", DEFAULT_LINK_FILTER_CHANNEL_SETTINGS["enabled"]):
+            return
+        if not link_filter_data[str(message.channel.id)].get("linklist", DEFAULT_LINK_FILTER_CHANNEL_SETTINGS["linklist"]):
+            return
+        if not link_filter_data[str(message.channel.id)].get("mode", DEFAULT_LINK_FILTER_CHANNEL_SETTINGS["mode"]):
+            return
+        
+        if link_filter_data[str(message.channel.id)]["mode"] == "whitelist":
+            for link in get_links_from_string(message.content):
+                if link.startswith(tuple(link_filter_data[str(message.channel.id)]["linklist"])):
+                    continue
+
+                try:
+                    await message.delete()
+                    return
+                except Exception:
+                    log.exception(traceback.format_exc())
+        elif link_filter_data[str(message.channel.id)]["mode"] == "blacklist":
+            for link in get_links_from_string(message.content):
+                if link.startswith(tuple(link_filter_data[str(message.channel.id)]["linklist"])):
+                    try:
+                        await message.delete()
+                        return
+                    except Exception:
+                        log.exception(traceback.format_exc())
+
     @commands.Cog.listener(name="on_member_update")
     async def run_role_traps_on_member_update(
         self, before: discord.Member, after: discord.Member
@@ -186,6 +346,35 @@ class ModerationCog(commands.GroupCog, name="mod"):
                     await after.ban(reason=role_traps_data[str(role.id)]["ban_reason"])
                 except Exception:
                     log.exception(traceback.format_exc())
+
+    mod_link_group = discord.app_commands.Group(
+        name="link", description="Manage link filtering."
+    )
+
+    @discord.app_commands.checks.has_permissions(manage_messages=True)
+    @discord.app_commands.checks.bot_has_permissions(manage_messages=True)
+    @mod_link_group.command(
+        name="filter", description="Edit the link filter for a channel"
+    )
+    async def mod_link_filter(
+        self, interaction: discord.Interaction, channel: typing.Optional[discord.TextChannel]
+    ):
+        channel = interaction.channel if not channel else channel
+
+        if not (link_filter_data := safe_read(COG, channel.guild, "link_filters")):
+            update_dict_defaults(DEFAULT_LINK_FILTER_SETTINGS, link_filter_data)
+        if not link_filter_data.get(str(channel.id)):
+            link_filter_data[str(channel.id)] = {}
+            update_dict_defaults(
+                DEFAULT_LINK_FILTER_CHANNEL_SETTINGS, link_filter_data[str(channel.id)]
+            )
+
+        embed = discord.Embed()
+        embed.description = f"> Channel: {channel.mention}\n> Enabled: ``{link_filter_data[str(channel.id)]['enabled']}``\n> Mode: ``{link_filter_data[str(channel.id)]['mode']}``\n\n**Link List**:\n```{', '.join(link for link in link_filter_data[str(channel.id)]['linklist'])}```"
+
+        await interaction.response.send_message(
+            embed=embed, view=EditLinkFilterView(interaction, channel), ephemeral=True
+        )
 
     mod_trap_role_group = discord.app_commands.Group(
         name="traprole", description="Manage trapped roles."
