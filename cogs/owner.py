@@ -1,6 +1,7 @@
 from discord.ext import commands
 from discord import app_commands
 from main import Mammoth
+from utils.storage import safe_read, safe_edit, update_dict_defaults
 import traceback
 import logging
 import discord
@@ -9,6 +10,7 @@ import os
 
 
 COG = __name__
+DEFAULT_WHITELIST_DATA = {"enabled": False, "whitelist": []}
 
 log = logging.getLogger(COG)
 
@@ -29,6 +31,147 @@ class OwnerCog(commands.GroupCog, name="owner"):
         super().__init__()
 
         log.info("Loaded")
+
+    @commands.Cog.listener(name="on_guild_join")
+    async def handle_whitelist_on_guild_join(self, guild: discord.Guild):
+        if not (whitelist_data := safe_read(COG, 0, "whitelist")):
+            return
+        if not whitelist_data["enabled"]:
+            return
+
+        if guild.id not in whitelist_data["whitelist"]:
+            try:
+                await guild.leave()
+                log.info(
+                    f"Left guild [{guild}] | [{guild.id}] because it is not whitelisted!"
+                )
+            except Exception:
+                log.error(
+                    f"Failed to leave non-whitelisted guild [{guild}] | [{guild.id}]"
+                )
+                log.exception(traceback.format_exc())
+
+    owner_whitelist_group = discord.app_commands.Group(
+        name="whitelist",
+        description="Manage the bot's guild whitelist.",
+    )
+
+    @owner_whitelist_group.command(
+        name="enable", description="Enable guild whitelisting."
+    )
+    async def owner_whitelist_enable(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        async with safe_edit(COG, 0, "whitelist") as whitelist_data:
+            if not whitelist_data:
+                update_dict_defaults(DEFAULT_WHITELIST_DATA, whitelist_data)
+            if whitelist_data["enabled"]:
+                await interaction.followup.send(
+                    "Guild whitelisting is already enabled!"
+                )
+                return
+
+            whitelist_data["enabled"] = True
+
+        await interaction.followup.send("Guild whitelisting enabled!")
+
+    @owner_whitelist_group.command(
+        name="disabled", description="Disable guild whitelisting."
+    )
+    async def owner_whitelist_disable(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        async with safe_edit(COG, 0, "whitelist") as whitelist_data:
+            if not whitelist_data:
+                update_dict_defaults(DEFAULT_WHITELIST_DATA, whitelist_data)
+            if not whitelist_data["enabled"]:
+                await interaction.followup.send("Guild whitelisting is not enabled!")
+                return
+
+            whitelist_data["enabled"] = False
+
+        await interaction.followup.send("Guild whitelisting disabled!")
+
+    @owner_whitelist_group.command(
+        name="add", description="Add a guild to the whitelist."
+    )
+    @app_commands.describe(guild_id="ID of the guild to whitelist.")
+    async def owner_whitelist_add(
+        self, interaction: discord.Interaction, guild_id: str
+    ):
+        if not guild_id.isdigit():
+            await interaction.response.send_message("Guild ID must be a number!")
+            return
+
+        guild_id = int(guild_id)
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        async with safe_edit(COG, 0, "whitelist") as whitelist_data:
+            if not whitelist_data:
+                update_dict_defaults(DEFAULT_WHITELIST_DATA, whitelist_data)
+            if not whitelist_data["enabled"]:
+                await interaction.followup.send("Guild whitelist is not enabled!")
+                return
+            if guild_id in whitelist_data["whitelist"]:
+                await interaction.followup.send(
+                    f"Guild ``{guild_id}`` is already whitelisted!"
+                )
+                return
+
+            whitelist_data["whitelist"].append(guild_id)
+
+        await interaction.followup.send(f"Guild ``{guild_id}`` whitelisted!")
+
+    @owner_whitelist_group.command(
+        name="remove", description="Remove a guild from the whitelist."
+    )
+    @app_commands.describe(guild_id="ID of the guild to remove from the whitelist.")
+    async def owner_whitelist_remove(
+        self, interaction: discord.Interaction, guild_id: str
+    ):
+        if not guild_id.isdigit():
+            await interaction.response.send_message("Guild ID must be a number!")
+            return
+
+        guild_id = int(guild_id)
+
+        await interaction.response.defer(ephemeral=True, thinking=True)
+
+        async with safe_edit(COG, 0, "whitelist") as whitelist_data:
+            if not whitelist_data:
+                update_dict_defaults(DEFAULT_WHITELIST_DATA, whitelist_data)
+            if not whitelist_data["enabled"]:
+                await interaction.followup.send("Guild whitelist is not enabled!")
+                return
+            if guild_id in whitelist_data["whitelist"]:
+                await interaction.followup.send(
+                    f"Guild ``{guild_id}`` is already whitelisted!"
+                )
+                return
+
+            whitelist_data["whitelist"].remove(guild_id)
+
+        await interaction.followup.send(
+            f"Guild ``{guild_id}`` removed from the whitelist!"
+        )
+
+    @owner_whitelist_remove.autocomplete("guild_id")
+    async def owner_whitelist_remove_autocomplete(
+        self, interaction: discord.Interaction, current: str
+    ):
+        if not (whitelist_data := safe_read(COG, 0, "whitelist")):
+            return []
+        if not whitelist_data.get("enabled", DEFAULT_WHITELIST_DATA["enabled"]):
+            return []
+        if not whitelist_data.get("whitelist", DEFAULT_WHITELIST_DATA["whitelist"]):
+            return []
+
+        return [
+            app_commands.Choice(name=str(guild_id), value=str(guild_id))
+            for guild_id in whitelist_data["whitelist"]
+            if str(guild_id) in current.lower()
+        ]
 
     @app_commands.command(name="load", description="Load a cog.")
     @app_commands.describe(cog="Cog to load")
