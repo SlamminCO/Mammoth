@@ -170,7 +170,7 @@ class OwnerCog(commands.GroupCog, name="owner"):
         return [
             app_commands.Choice(name=str(guild_id), value=str(guild_id))
             for guild_id in whitelist_data["whitelist"]
-            if str(guild_id) in current.lower()
+            if current.lower() in str(guild_id).lower()
         ]
 
     @app_commands.command(name="load", description="Load a cog.")
