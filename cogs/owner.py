@@ -144,9 +144,9 @@ class OwnerCog(commands.GroupCog, name="owner"):
             if not whitelist_data["enabled"]:
                 await interaction.followup.send("Guild whitelist is not enabled!")
                 return
-            if guild_id in whitelist_data["whitelist"]:
+            if guild_id not in whitelist_data["whitelist"]:
                 await interaction.followup.send(
-                    f"Guild ``{guild_id}`` is already whitelisted!"
+                    f"Guild ``{guild_id}`` is not whitelisted!"
                 )
                 return
 
